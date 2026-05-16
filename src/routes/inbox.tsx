@@ -497,3 +497,161 @@ function Row({ label, value, valueNode }: { label: string; value?: string; value
     </div>
   );
 }
+
+function synthesiseReply(ticket: Ticket, kbAnswer: string) {
+  const firstName = ticket.customer.split(" ")[0] || "there";
+  return `Hi ${firstName},\n\nThanks for reaching out about Boldr. ${kbAnswer}\n\nLet me know if anything else is unclear.\n\n— Boldr Customer Care`;
+}
+
+function DraftReplyCard({ ticket }: { ticket: Ticket }) {
+  const topMatch = (ticket.kbMatches ?? [])
+    .slice()
+    .sort((a, b) => b.similarity - a.similarity)[0];
+  const topKb = topMatch ? kbEntries.find((k) => k.id === topMatch.kbId) : undefined;
+
+  const initial =
+    ticket.draftReply ??
+    (topKb ? synthesiseReply(ticket, topKb.answer) : "");
+
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState(initial);
+  const [sent, setSent] = useState(false);
+
+  if (sent) {
+    return (
+      <div className="rounded-md border border-success/40 bg-success-soft/40 p-3.5">
+        <div className="flex items-center gap-2 text-[12.5px]">
+          <Check className="h-3.5 w-3.5 text-success" />
+          <span className="font-medium">Reply sent to {ticket.customer}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const alsoRefs = (ticket.kbMatches ?? []).slice(1, 3);
+  const synthesised = !ticket.draftReply && !!topKb;
+
+  return (
+    <div className="rounded-md hairline bg-card p-3.5">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[12px] font-medium">Drafted reply</div>
+        <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+          Boldr brand voice
+        </div>
+      </div>
+
+      {topMatch && (
+        <div className="mb-2 text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+          {synthesised ? "Drafted from" : "Based on"} {topMatch.kbId} ·{" "}
+          <span className="text-ember tabular-nums">
+            {(topMatch.similarity * 100).toFixed(0)}%
+          </span>
+        </div>
+      )}
+
+      {editing ? (
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={8}
+          autoFocus
+          className="w-full rounded bg-surface p-3 text-[12.5px] leading-relaxed text-foreground/90 hairline outline-none focus:ring-2 focus:ring-ember/30 resize-y"
+        />
+      ) : (
+        <div className="rounded bg-surface p-3 text-[12.5px] whitespace-pre-wrap leading-relaxed text-foreground/85">
+          {body}
+        </div>
+      )}
+
+      {alsoRefs.length > 0 && (
+        <div className="mt-2 text-[10.5px] text-muted-foreground">
+          Also referenced: {alsoRefs.map((m) => m.kbId).join(" · ")}
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center gap-1.5">
+        <button
+          onClick={() => {
+            setSent(true);
+            toast.success(`Reply sent to ${ticket.customer}`);
+          }}
+          disabled={!body.trim()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"
+        >
+          <Send className="h-3 w-3" /> Approve & send
+        </button>
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] hover:bg-surface"
+        >
+          <Edit3 className="h-3 w-3" /> {editing ? "Done editing" : "Edit"}
+        </button>
+        <button
+          onClick={() => {
+            setBody(initial);
+            setEditing(false);
+            toast("Draft rejected — reverted to original");
+          }}
+          className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-destructive"
+        >
+          <X className="h-3 w-3" /> Reject
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ManualReplyCard({ ticket }: { ticket: Ticket }) {
+  const external = isExternalRoute(ticket.routedTo);
+  const [body, setBody] = useState("");
+  const [sent, setSent] = useState(false);
+
+  if (external) {
+    return (
+      <div className="rounded-md hairline bg-card p-3.5 text-[12.5px] text-foreground/75">
+        No KB answer needed — this ticket is handled in{" "}
+        <span className="font-medium text-foreground">{ticket.routedTo}</span>.
+      </div>
+    );
+  }
+
+  if (sent) {
+    return (
+      <div className="rounded-md border border-success/40 bg-success-soft/40 p-3.5">
+        <div className="flex items-center gap-2 text-[12.5px]">
+          <Check className="h-3.5 w-3.5 text-success" />
+          <span className="font-medium">Reply sent to {ticket.customer}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md hairline bg-card p-3.5 space-y-2.5">
+      <div className="text-[12px] font-medium">Reply manually</div>
+      <p className="text-[11.5px] text-muted-foreground leading-relaxed">
+        No KB match for this one. Write the reply here — if it should become a KB entry, flag it
+        as a knowledge gap.
+      </p>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={5}
+        placeholder={`Hi ${ticket.customer.split(" ")[0]},\n\n…`}
+        className="w-full rounded bg-surface p-3 text-[12.5px] leading-relaxed text-foreground/90 hairline outline-none focus:ring-2 focus:ring-ember/30 resize-y"
+      />
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => {
+            setSent(true);
+            toast.success(`Reply sent to ${ticket.customer}`);
+          }}
+          disabled={!body.trim()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"
+        >
+          <Send className="h-3 w-3" /> Send reply
+        </button>
+      </div>
+    </div>
+  );
+}
