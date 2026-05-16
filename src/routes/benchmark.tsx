@@ -158,10 +158,6 @@ function BenchmarkPage() {
         </div>
       </section>
 
-      {/* Drill deeper CTA — opens the Copilot drawer */}
-      <CopilotCta />
-
-
       {/* Quotes */}
       <section className="mt-8">
         <div className="flex items-baseline justify-between mb-3">
