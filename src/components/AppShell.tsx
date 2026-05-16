@@ -5,12 +5,12 @@ import {
   BookOpen,
   Sparkles,
   Telescope,
-  Watch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopilotProvider, useCopilot } from "./copilot-context";
 import { CopilotDrawer } from "./CopilotDrawer";
 import { CitationDrawer } from "./CitationDrawer";
+import boldrLogo from "@/assets/boldr-logo.png";
 
 const NAV = [
   { to: "/inbox", label: "Email Ops", icon: Inbox, hint: "Triage · draft · send" },
