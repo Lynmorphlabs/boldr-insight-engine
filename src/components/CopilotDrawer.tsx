@@ -33,7 +33,7 @@ export function CopilotDrawer() {
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="leading-tight">
-              <div className="text-[14px] font-semibold">Insights Copilot</div>
+              <div className="text-[14px] font-semibold">Insights Ai</div>
               <div className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground">Ask your data</div>
             </div>
           </div>
