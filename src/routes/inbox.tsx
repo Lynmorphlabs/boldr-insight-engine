@@ -327,33 +327,14 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
         </div>
       ) : null}
 
-      {/* Answerable: draft reply */}
-      {!ticket.isGap && ticket.draftReply && (
-        <div className="rounded-md hairline bg-card p-3.5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[12px] font-medium">Drafted reply</div>
-            <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">Boldr brand voice</div>
-          </div>
-          <div className="rounded bg-surface p-3 text-[12.5px] whitespace-pre-wrap leading-relaxed text-foreground/85">
-            {ticket.draftReply}
-          </div>
-          <div className="mt-3 flex items-center gap-1.5">
-            <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90">
-              <Send className="h-3 w-3" /> Approve & send
-            </button>
-            <button className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] hover:bg-surface">
-              <Edit3 className="h-3 w-3" /> Edit
-            </button>
-            <button className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-destructive">
-              <X className="h-3 w-3" /> Reject
-            </button>
-          </div>
-        </div>
+      {/* Answerable: draft reply (uses ticket.draftReply when present, else synthesised from top KB match) */}
+      {!ticket.isGap && ticket.answeredByKb && (
+        <DraftReplyCard key={ticket.id} ticket={ticket} />
       )}
-      {!ticket.isGap && !ticket.draftReply && (
-        <div className="rounded-md hairline bg-card p-3.5 text-[12.5px] text-muted-foreground">
-          KB match queued — draft will appear after CS staff confirms tone selection.
-        </div>
+
+      {/* Honest empty state: no KB match AND not a gap */}
+      {!ticket.isGap && !ticket.answeredByKb && (
+        <ManualReplyCard key={ticket.id} ticket={ticket} />
       )}
 
       {/* CS-authored KB entry form — the hero moment */}
