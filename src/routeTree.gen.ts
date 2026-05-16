@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as IntelligenceRouteImport } from './routes/intelligence'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as BenchmarkRouteImport } from './routes/benchmark'
 import { Route as IndexRouteImport } from './routes/index'
 
 const KnowledgeRoute = KnowledgeRouteImport.update({
@@ -29,6 +30,11 @@ const InboxRoute = InboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BenchmarkRoute = BenchmarkRouteImport.update({
+  id: '/benchmark',
+  path: '/benchmark',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,12 +43,14 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/benchmark': typeof BenchmarkRoute
   '/inbox': typeof InboxRoute
   '/intelligence': typeof IntelligenceRoute
   '/knowledge': typeof KnowledgeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/benchmark': typeof BenchmarkRoute
   '/inbox': typeof InboxRoute
   '/intelligence': typeof IntelligenceRoute
   '/knowledge': typeof KnowledgeRoute
@@ -50,20 +58,28 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/benchmark': typeof BenchmarkRoute
   '/inbox': typeof InboxRoute
   '/intelligence': typeof IntelligenceRoute
   '/knowledge': typeof KnowledgeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inbox' | '/intelligence' | '/knowledge'
+  fullPaths: '/' | '/benchmark' | '/inbox' | '/intelligence' | '/knowledge'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inbox' | '/intelligence' | '/knowledge'
-  id: '__root__' | '/' | '/inbox' | '/intelligence' | '/knowledge'
+  to: '/' | '/benchmark' | '/inbox' | '/intelligence' | '/knowledge'
+  id:
+    | '__root__'
+    | '/'
+    | '/benchmark'
+    | '/inbox'
+    | '/intelligence'
+    | '/knowledge'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BenchmarkRoute: typeof BenchmarkRoute
   InboxRoute: typeof InboxRoute
   IntelligenceRoute: typeof IntelligenceRoute
   KnowledgeRoute: typeof KnowledgeRoute
@@ -92,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/benchmark': {
+      id: '/benchmark'
+      path: '/benchmark'
+      fullPath: '/benchmark'
+      preLoaderRoute: typeof BenchmarkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +127,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BenchmarkRoute: BenchmarkRoute,
   InboxRoute: InboxRoute,
   IntelligenceRoute: IntelligenceRoute,
   KnowledgeRoute: KnowledgeRoute,
