@@ -144,8 +144,14 @@ function InboxPage() {
   const [escOnly, setEscOnly] = useState(false);
   const [mockTicketState, setMockTicketState] = useState<Record<string, PersistedTicketState>>({});
 
+  // Always start the Inbox from seed data on load. Any prior per-ticket
+  // overrides (e.g. a ticket marked "resolved" in an earlier demo session)
+  // are cleared so the demo is reproducible across reloads.
   useEffect(() => {
-    setMockTicketState(readMockTicketState());
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(MOCK_TICKET_STATE_STORAGE_KEY);
+    }
+    setMockTicketState({});
   }, []);
 
   const visibleTickets = useMemo(
