@@ -9,7 +9,7 @@ function findTicket(id: string): Ticket | undefined {
 
 function findExternal(id: string): { quote: ExternalQuote; source: ExternalSource } | undefined {
   for (const s of externalSources) {
-    const q = s.quotes.find((q) => q.author.includes(id) || s.id === id);
+    const q = s.quotes.find((q) => q.author.includes(id) || String(s.id) === id);
     if (q) return { quote: q, source: s };
   }
   return undefined;
