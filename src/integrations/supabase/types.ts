@@ -192,6 +192,33 @@ export type Database = {
           },
         ]
       }
+      monthly_briefs: {
+        Row: {
+          generated_at: string
+          id: string
+          intro: string
+          items: Json
+          month: string
+          title: string
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          intro: string
+          items?: Json
+          month: string
+          title: string
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          intro?: string
+          items?: Json
+          month?: string
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
