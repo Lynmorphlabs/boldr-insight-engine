@@ -306,8 +306,8 @@ export const ticketsNew: TicketNew[] = [
     body: 'I\'m ordering from the UK. Will I have to pay customs duties on top of the shipping cost?',
     status: 'Resolved', persona: '—',
     answeredByKb: false, isKnowledgeGap: false, requiresEscalation: true,
-    classifyConfidence: 92, kbMatch: 'KB-030', kbMatchScore: 87, answeredByKbNote: undefined as never,
-  } as Ticket,
+    classifyConfidence: 92, kbMatch: 'KB-030', kbMatchScore: 87,
+  } as TicketNew,
   {
     id: 'TKT-1007', date: '2025-12-14', customer: 'Luke Nair', email: 'luke_nair@icloud.com', orderId: 'BLD-11504',
     channel: 'Instagram DM', lane: 'Order status', subject: 'Discount code not working',
