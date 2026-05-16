@@ -39,29 +39,23 @@ const FIVE_PERSONAS: Persona[] = [
 
 function IntelligencePage() {
   const queryClient = useQueryClient();
-  const fetchClusters = useServerFn(getThemeClusters);
-  const fetchBrief = useServerFn(getLatestBrief);
-  const regenBrief = useServerFn(regenerateBrief);
 
   const { data: clusterData } = useQuery({
     queryKey: ["theme-clusters"],
-    queryFn: () => fetchClusters(),
+    queryFn: () => fetchThemeClusters(),
     staleTime: 5 * 60_000,
   });
   const clusters = clusterData?.clusters ?? [];
 
   const { data: briefData, isLoading: briefLoading } = useQuery({
     queryKey: ["monthly-brief"],
-    queryFn: () => fetchBrief(),
+    queryFn: () => fetchLatestBrief(),
     staleTime: 60_000,
   });
   const brief = briefData?.brief ?? null;
 
   const regenMut = useMutation({
-    mutationFn: () => {
-      Webhooks.intelligenceBriefRegenerated({ trigger: "manual" });
-      return regenBrief();
-    },
+    mutationFn: () => regenerateBriefApi(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["monthly-brief"] });
       toast.success("Monthly brief regenerated", {
