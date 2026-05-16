@@ -271,7 +271,9 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
         </div>
         <div className="leading-tight">
           <div className="text-[13px] font-medium">AI triage</div>
-          <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">Confidence {(ticket.confidence * 100).toFixed(0)}%</div>
+          <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+            Classification confidence {ticket.classifyConfidence}%
+          </div>
         </div>
       </div>
 
@@ -280,10 +282,13 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
         <Row label="Intent" value={ticket.intent} />
         <Row label="Lane" value={laneLabel(ticket.lane)} />
         <Row label="Persona" valueNode={<PersonaChip persona={ticket.persona} />} />
+        <Row label="Knowledge gap" value={ticket.isKnowledgeGap ? "Yes" : "No"} />
+        <Row label="Requires escalation" value={ticket.requiresEscalation ? "Yes" : "No"} />
+        {ticket.routedTo && <Row label="Routed to" value={ticket.routedTo} />}
       </div>
 
       {/* KB match OR gap */}
-      {ticket.isGap ? (
+      {ticket.isKnowledgeGap ? (
         <div className="rounded-md border border-destructive/40 bg-destructive-soft p-4">
           <div className="flex items-center gap-2">
             <FileWarning className="h-4 w-4 text-destructive" />
@@ -293,7 +298,7 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
             Not in KB — routed to CS staff. <span className="font-medium">AI did not hallucinate.</span>
           </p>
         </div>
-      ) : (
+      ) : ticket.answeredByKb ? (
         <div className="rounded-md hairline bg-card p-3.5">
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck className="h-3.5 w-3.5 text-success" />
@@ -314,7 +319,7 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
             })}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Answerable: draft reply */}
       {!ticket.isGap && ticket.draftReply && (
