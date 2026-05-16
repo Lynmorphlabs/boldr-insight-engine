@@ -30,25 +30,10 @@ function verdictTone(v: Verdict) {
     : "bg-success text-success-foreground";
 }
 
-type SignalMatch = "Boldr-Specific Gap" | "Market-Wide Concern" | "Emerging Opportunity";
-
-function classifySignal(internal: number, external: number): { match: SignalMatch; action: string } {
-  if (external >= 3 && external >= internal * 2.5 && internal <= 4) {
-    return { match: "Market-Wide Concern", action: "Lead with content + paid search — demand exists market-wide; capture it before competitors." };
-  }
-  if (internal > 0 && external < Math.max(2, internal * 0.5)) {
-    return { match: "Boldr-Specific Gap", action: "Fix the PDP / KB — customers ask Boldr about this but the wider market is silent. It's a Boldr clarity gap." };
-  }
-  if (external >= 2 && internal <= 2) {
-    return { match: "Emerging Opportunity", action: "Pilot a small campaign — external chatter is rising before internal tickets. First-mover window." };
-  }
-  return { match: "Market-Wide Concern", action: "Monitor both signals; align messaging across PDP and social." };
-}
-
-function signalTone(m: SignalMatch) {
-  if (m === "Boldr-Specific Gap") return "bg-ember text-ember-foreground";
-  if (m === "Market-Wide Concern") return "bg-chart-4/20 text-chart-4 border border-chart-4/40";
-  return "bg-success text-success-foreground";
+function verdictAction(v: Verdict): string {
+  return v === "Boldr-Specific Gap"
+    ? "Fix the PDP / KB — Boldr has the answer internally but it is missing where customers look."
+    : "Lead with content + paid search — demand exists market-wide; capture it before competitors do.";
 }
 
 function BenchmarkPage() {
