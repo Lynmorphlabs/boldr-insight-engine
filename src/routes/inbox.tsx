@@ -563,9 +563,35 @@ function KbGapForm({
       const kbSave = { kbId, draft: asDraft };
       setStatus("idle");
       setSaved(kbSave);
+      const nextStatus: TicketStatus = asDraft ? "pending_reply" : "resolved";
       onUpdateMockTicketState(ticket.id, {
         kbSave,
-        status: asDraft ? "pending_reply" : "resolved",
+        status: nextStatus,
+      });
+      // Workflow notifications — KB entry, gap resolution, ticket status, reply.
+      Webhooks.knowledgeEntryCreated({
+        kbId,
+        ticketId: ticket.id,
+        category,
+        question,
+        answer: answer.trim(),
+        sourceOfTruth: source,
+        draft: asDraft,
+      });
+      if (!asDraft) {
+        Webhooks.knowledgeGapResolved({ ticketId: ticket.id, kbId });
+        Webhooks.ticketReplySent({
+          ticketId: ticket.id,
+          customer: ticket.customer,
+          body: reply,
+          kbId,
+        });
+        Webhooks.ticketResolved({ ticketId: ticket.id, kbId });
+      }
+      Webhooks.ticketStatusChanged({
+        ticketId: ticket.id,
+        from: ticket.status,
+        to: nextStatus,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
