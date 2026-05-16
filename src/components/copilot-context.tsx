@@ -15,6 +15,8 @@ function matchResponse(prompt: string): CopilotResponse {
   return fuzzy ?? copilotResponses[0];
 }
 
+export type CitationRef = { type: "ticket" | "external"; id: string; label: string; quote?: string };
+
 type Ctx = {
   open: boolean;
   setOpen: (v: boolean) => void;
@@ -22,6 +24,9 @@ type Ctx = {
   turns: Turn[];
   ask: (prompt: string) => void;
   reset: () => void;
+  citation: CitationRef | null;
+  openCitation: (c: CitationRef) => void;
+  closeCitation: () => void;
 };
 
 const CopilotContext = createContext<Ctx | null>(null);
@@ -29,7 +34,11 @@ const CopilotContext = createContext<Ctx | null>(null);
 export function CopilotProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [citation, setCitation] = useState<CitationRef | null>(null);
   const seq = useRef(0);
+
+  const openCitation = useCallback((c: CitationRef) => setCitation(c), []);
+  const closeCitation = useCallback(() => setCitation(null), []);
 
   const ask = useCallback((prompt: string) => {
     const trimmed = prompt.trim();
@@ -62,7 +71,11 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
         e.preventDefault();
         setOpen((v) => !v);
       } else if (e.key === "Escape") {
-        setOpen(false);
+        setCitation((c) => {
+          if (c) return null;
+          setOpen(false);
+          return c;
+        });
       }
     }
     window.addEventListener("keydown", onKey);
@@ -70,7 +83,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <CopilotContext.Provider value={{ open, setOpen, toggle, turns, ask, reset }}>
+    <CopilotContext.Provider value={{ open, setOpen, toggle, turns, ask, reset, citation, openCitation, closeCitation }}>
       {children}
     </CopilotContext.Provider>
   );
