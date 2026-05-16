@@ -481,14 +481,27 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
         </div>
       </div>
 
-      {reply && (
+      {answer.trim() && (
         <div className="rounded bg-surface/70 p-3 hairline">
-          <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground mb-1">
-            Reply preview · Boldr brand voice
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+              Reply preview · editable
+            </div>
+            {replyOverride !== null && (
+              <button
+                onClick={() => setReplyOverride(null)}
+                className="text-[10.5px] text-muted-foreground hover:text-foreground"
+              >
+                Reset to auto
+              </button>
+            )}
           </div>
-          <p className="text-[12.5px] whitespace-pre-wrap leading-relaxed text-foreground/85">
-            {reply}
-          </p>
+          <textarea
+            value={reply}
+            onChange={(e) => setReplyOverride(e.target.value)}
+            rows={7}
+            className="w-full text-[12.5px] rounded bg-surface px-2 py-1.5 hairline outline-none focus:ring-2 focus:ring-ember/30 leading-relaxed resize-y text-foreground/90"
+          />
         </div>
       )}
 
