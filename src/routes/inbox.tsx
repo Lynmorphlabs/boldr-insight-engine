@@ -267,7 +267,13 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
       </div>
 
       <div className="mt-4 flex items-center gap-2 flex-wrap">
-        <Chip>{laneLabel(ticket.lane)}</Chip>
+        {isShopifyOpsTicket(ticket) ? (
+          <span className="inline-flex items-center gap-1 rounded bg-primary/15 text-primary px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]">
+            <ShoppingBag className="h-2.5 w-2.5" /> Shopify Ops
+          </span>
+        ) : (
+          <Chip>{laneLabel(ticket.lane)}</Chip>
+        )}
         <PersonaChip persona={ticket.persona} />
         <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]", statusTone(ticket.status))}>
           {ticket.status.replace("_", " ")}
