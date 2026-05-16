@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
@@ -53,57 +53,57 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
-  /* Warm off-white base, near-black charcoal ink */
-  --background: oklch(0.978 0.005 80);
-  --surface: oklch(0.965 0.006 75);
-  --surface-2: oklch(0.948 0.008 75);
-  --foreground: oklch(0.205 0.012 60);
+  /* OpenAI-style dark: near-black bg, layered neutral surfaces, off-white ink */
+  --background: oklch(0.18 0.004 260);        /* #1a1a1a-ish */
+  --surface: oklch(0.22 0.004 260);           /* sidebar / panels */
+  --surface-2: oklch(0.255 0.005 260);        /* hover / raised */
+  --foreground: oklch(0.965 0.003 260);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.012 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.012 60);
+  --card: oklch(0.215 0.004 260);
+  --card-foreground: oklch(0.965 0.003 260);
+  --popover: oklch(0.235 0.005 260);
+  --popover-foreground: oklch(0.965 0.003 260);
 
-  --primary: oklch(0.22 0.012 60);
-  --primary-foreground: oklch(0.978 0.005 80);
+  --primary: oklch(0.965 0.003 260);
+  --primary-foreground: oklch(0.18 0.004 260);
 
-  --secondary: oklch(0.93 0.008 75);
-  --secondary-foreground: oklch(0.22 0.012 60);
+  --secondary: oklch(0.27 0.005 260);
+  --secondary-foreground: oklch(0.95 0.003 260);
 
-  --muted: oklch(0.945 0.006 75);
-  --muted-foreground: oklch(0.5 0.012 65);
+  --muted: oklch(0.25 0.005 260);
+  --muted-foreground: oklch(0.7 0.008 260);
 
-  --accent: oklch(0.93 0.008 75);
-  --accent-foreground: oklch(0.22 0.012 60);
+  --accent: oklch(0.3 0.006 260);
+  --accent-foreground: oklch(0.965 0.003 260);
 
-  /* Boldr Ember LE — burnt orange */
-  --ember: oklch(0.62 0.165 45);
-  --ember-foreground: oklch(0.99 0 0);
-  --ember-soft: oklch(0.94 0.04 50);
+  /* Subtle teal-green accent (OpenAI signature hint) */
+  --ember: oklch(0.72 0.13 175);
+  --ember-foreground: oklch(0.15 0.01 175);
+  --ember-soft: oklch(0.32 0.05 175);
 
-  --success: oklch(0.52 0.11 155);
-  --success-foreground: oklch(0.99 0 0);
-  --success-soft: oklch(0.93 0.05 155);
+  --success: oklch(0.72 0.13 165);
+  --success-foreground: oklch(0.15 0.01 165);
+  --success-soft: oklch(0.3 0.05 165);
 
-  --warning: oklch(0.7 0.13 75);
-  --warning-soft: oklch(0.94 0.06 75);
+  --warning: oklch(0.78 0.13 75);
+  --warning-soft: oklch(0.32 0.06 75);
 
-  --destructive: oklch(0.55 0.2 27);
+  --destructive: oklch(0.62 0.2 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --destructive-soft: oklch(0.94 0.05 27);
+  --destructive-soft: oklch(0.32 0.08 25);
 
-  --border: oklch(0.9 0.008 70);
-  --border-strong: oklch(0.82 0.01 65);
-  --input: oklch(0.9 0.008 70);
-  --ring: oklch(0.62 0.165 45);
+  --border: oklch(0.3 0.005 260);
+  --border-strong: oklch(0.4 0.006 260);
+  --input: oklch(0.28 0.005 260);
+  --ring: oklch(0.72 0.13 175);
 
-  --chart-1: oklch(0.62 0.165 45);   /* ember */
-  --chart-2: oklch(0.35 0.015 60);   /* charcoal */
-  --chart-3: oklch(0.55 0.04 65);    /* warm grey */
-  --chart-4: oklch(0.72 0.08 50);    /* tan */
-  --chart-5: oklch(0.52 0.11 155);   /* sage */
+  --chart-1: oklch(0.72 0.13 175);   /* teal */
+  --chart-2: oklch(0.78 0.12 75);    /* amber */
+  --chart-3: oklch(0.7 0.14 295);    /* violet */
+  --chart-4: oklch(0.72 0.15 25);    /* coral */
+  --chart-5: oklch(0.78 0.13 145);   /* mint */
 }
 
 @layer base {
@@ -116,8 +116,8 @@
   }
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
-    font-feature-settings: "ss01";
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    font-weight: 600;
   }
   ::selection { background: var(--ember-soft); color: var(--foreground); }
 }
