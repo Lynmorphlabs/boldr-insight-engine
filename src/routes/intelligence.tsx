@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { PersonaChip } from "./inbox";
 import { getThemeClusters, getLatestBrief, regenerateBrief } from "@/lib/intelligence.functions";
+import { Webhooks } from "@/lib/webhooks";
 
 export const Route = createFileRoute("/intelligence")({
   head: () => ({
