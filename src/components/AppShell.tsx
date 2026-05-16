@@ -69,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground">Engine status</div>
           <div className="mt-2 flex items-center gap-2 text-[12px]">
             <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            <span>n8n · Postgres · OpenAI</span>
+            <span>All systems operational</span>
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">70 tickets · 39 KB entries · 3 sources</div>
         </div>
