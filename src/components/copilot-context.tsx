@@ -79,7 +79,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <CopilotContext.Provider value={{ open, setOpen, toggle, turns, ask, reset }}>
+    <CopilotContext.Provider value={{ open, setOpen, toggle, turns, ask, reset, citation, openCitation, closeCitation }}>
       {children}
     </CopilotContext.Provider>
   );
