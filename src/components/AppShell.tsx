@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Inbox,
   BookOpen,
@@ -8,6 +8,8 @@ import {
   Watch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CopilotProvider, useCopilot } from "./copilot-context";
+import { CopilotDrawer } from "./CopilotDrawer";
 
 const NAV = [
   { to: "/inbox", label: "Email Ops", icon: Inbox, hint: "Triage · draft · send" },
@@ -17,19 +19,22 @@ const NAV = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <CopilotProvider>
+      <AppShellInner>{children}</AppShellInner>
+      <CopilotDrawer />
+    </CopilotProvider>
+  );
+}
+
+function AppShellInner({ children }: { children: ReactNode }) {
+  const { setOpen } = useCopilot();
   const { location } = useRouterState();
-  const navigate = useNavigate();
   const pathname = location.pathname;
   const current = NAV.find((n) => pathname.startsWith(n.to)) ?? NAV[0];
-  const onBenchmark = pathname.startsWith("/benchmark");
 
-  function openCopilot() {
-    if (onBenchmark) {
-      document.getElementById("copilot")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      navigate({ to: "/benchmark", hash: "copilot" });
-    }
-  }
+  return (
+    <div className="flex min-h-screen bg-background text-foreground">
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
