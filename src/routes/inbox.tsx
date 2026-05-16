@@ -386,7 +386,8 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
   const [category, setCategory] = useState(prefill?.category ?? laneLabel(ticket.lane));
   const [question, setQuestion] = useState(prefill?.question ?? ticket.intent);
   const [answer, setAnswer] = useState("");
-  const [source, setSource] = useState<SourceOfTruth | null>(null);
+  const [source, setSource] = useState<SourceOfTruth>("self");
+  const [replyOverride, setReplyOverride] = useState<string | null>(null);
   const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
 
   if (saved) {
@@ -407,10 +408,11 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
     );
   }
 
-  const canSave = answer.trim().length > 0 && source !== null;
-  const reply = answer.trim()
+  const canSave = answer.trim().length > 0;
+  const autoReply = answer.trim()
     ? `Hi ${ticket.customer.split(" ")[0]},\n\nThanks for reaching out about Boldr. ${answer.trim()}\n\nLet me know if anything else is unclear.\n\n— Boldr Customer Care`
     : "";
+  const reply = replyOverride ?? autoReply;
 
   function save(asDraft: boolean) {
     const kbId = `KB-${String(Math.floor(900 + Math.random() * 99)).padStart(3, "0")}`;
@@ -479,14 +481,27 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
         </div>
       </div>
 
-      {reply && (
+      {answer.trim() && (
         <div className="rounded bg-surface/70 p-3 hairline">
-          <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground mb-1">
-            Reply preview · Boldr brand voice
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+              Reply preview · editable
+            </div>
+            {replyOverride !== null && (
+              <button
+                onClick={() => setReplyOverride(null)}
+                className="text-[10.5px] text-muted-foreground hover:text-foreground"
+              >
+                Reset to auto
+              </button>
+            )}
           </div>
-          <p className="text-[12.5px] whitespace-pre-wrap leading-relaxed text-foreground/85">
-            {reply}
-          </p>
+          <textarea
+            value={reply}
+            onChange={(e) => setReplyOverride(e.target.value)}
+            rows={7}
+            className="w-full text-[12.5px] rounded bg-surface px-2 py-1.5 hairline outline-none focus:ring-2 focus:ring-ember/30 leading-relaxed resize-y text-foreground/90"
+          />
         </div>
       )}
 
