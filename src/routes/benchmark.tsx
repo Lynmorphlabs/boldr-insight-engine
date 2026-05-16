@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { themes, externalSources, type Verdict } from "@/data";
@@ -56,7 +56,7 @@ function BenchmarkPage() {
   const getQuotes = useServerFn(getExternalQuotes);
   const syncFn = useServerFn(syncExternalSentiment);
 
-  const { data: quotesData } = useQuery({
+  const { data: quotesData, isLoading: quotesLoading } = useQuery({
     queryKey: ["external-quotes"],
     queryFn: () => getQuotes(),
     staleTime: 60_000,
@@ -79,6 +79,17 @@ function BenchmarkPage() {
     },
     onError: (e) => toast.error("Sync failed", { description: (e as Error).message }),
   });
+
+  // Auto-run sync once if external_quotes is empty on first load
+  const autoSyncTriggered = useRef(false);
+  useEffect(() => {
+    if (quotesLoading || autoSyncTriggered.current) return;
+    if (quotes.length === 0 && !syncMut.isPending) {
+      autoSyncTriggered.current = true;
+      toast.info("No external quotes yet — running first sync…");
+      syncMut.mutate();
+    }
+  }, [quotesLoading, quotes.length, syncMut]);
 
   // External counts per theme bucket
   const externalCounts = useMemo(() => {
