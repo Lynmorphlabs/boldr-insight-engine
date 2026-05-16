@@ -34,7 +34,25 @@ const CopilotContext = createContext<Ctx | null>(null);
 export function CopilotProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [citation, setCitation] = useState<CitationRef | null>(null);
+  const [citation, setCitation] = useState<CitationRef | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.sessionStorage.getItem("boldr.copilot.citation");
+      return raw ? (JSON.parse(raw) as CitationRef) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (citation) window.sessionStorage.setItem("boldr.copilot.citation", JSON.stringify(citation));
+      else window.sessionStorage.removeItem("boldr.copilot.citation");
+    } catch {
+      /* ignore quota / privacy errors */
+    }
+  }, [citation]);
   const seq = useRef(0);
 
   const openCitation = useCallback((c: CitationRef) => setCitation(c), []);
