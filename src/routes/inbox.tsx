@@ -408,10 +408,11 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
     );
   }
 
-  const canSave = answer.trim().length > 0 && source !== null;
-  const reply = answer.trim()
+  const canSave = answer.trim().length > 0;
+  const autoReply = answer.trim()
     ? `Hi ${ticket.customer.split(" ")[0]},\n\nThanks for reaching out about Boldr. ${answer.trim()}\n\nLet me know if anything else is unclear.\n\n— Boldr Customer Care`
     : "";
+  const reply = replyOverride ?? autoReply;
 
   function save(asDraft: boolean) {
     const kbId = `KB-${String(Math.floor(900 + Math.random() * 99)).padStart(3, "0")}`;
