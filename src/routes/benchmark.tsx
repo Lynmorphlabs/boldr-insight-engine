@@ -123,11 +123,9 @@ function BenchmarkPage() {
         </div>
       </section>
 
-      {/* Docked Copilot — drill deeper */}
-      <section id="copilot" className="mt-8 rounded-2xl hairline-strong bg-card/70 backdrop-blur p-5 relative overflow-hidden">
-        <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full gradient-brand opacity-[0.12] blur-3xl pointer-events-none" />
-        <CopilotPanel />
-      </section>
+      {/* Drill deeper CTA — opens the Copilot drawer */}
+      <CopilotCta />
+
 
       {/* Quotes */}
       <section className="mt-8">
