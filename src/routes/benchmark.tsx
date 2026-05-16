@@ -68,9 +68,37 @@ function BenchmarkPage() {
             <h3 className="font-display text-[18px] tracking-tight">Internal tickets vs external volume</h3>
             <p className="text-[11px] text-muted-foreground mt-0.5">Per theme — count of internal tickets against count of external mentions across the 3 sources.</p>
           </div>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-chart-4" /> Internal</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-ember" /> External</span>
+          <div className="flex items-center gap-1.5 text-[11px]" onMouseLeave={() => setHovered(null)}>
+            {(["Internal", "External"] as const).map((key) => {
+              const isActive = hovered === key;
+              const isDimmed = hovered !== null && !isActive;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onMouseEnter={() => setHovered(key)}
+                  onFocus={() => setHovered(key)}
+                  onBlur={() => setHovered(null)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-all duration-150 cursor-pointer",
+                    isActive
+                      ? "bg-ember-soft/30 hairline-strong text-foreground -translate-y-[1px]"
+                      : isDimmed
+                        ? "text-muted-foreground/50 hover:text-foreground"
+                        : "text-muted-foreground hover:bg-surface-2/50",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-sm transition-transform",
+                      key === "Internal" ? "bg-chart-4" : "bg-ember",
+                      isActive && "scale-125 shadow-[0_0_0_3px_oklch(0.72_0.19_45_/_0.25)]",
+                    )}
+                  />
+                  {key}
+                </button>
+              );
+            })}
           </div>
         </div>
         <div className="mt-3 h-[280px]">
@@ -85,9 +113,8 @@ function BenchmarkPage() {
                 labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
                 itemStyle={{ color: "var(--muted-foreground)" }}
               />
-              <Legend wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)" }} iconType="square" />
-              <Bar dataKey="Internal" fill="var(--chart-4)" radius={[3, 3, 0, 0]} barSize={22} />
-              <Bar dataKey="External" fill="var(--ember)" radius={[3, 3, 0, 0]} barSize={22} />
+              <Bar dataKey="Internal" fill="var(--chart-4)" fillOpacity={opacityFor("Internal")} radius={[3, 3, 0, 0]} barSize={22} isAnimationActive={false} />
+              <Bar dataKey="External" fill="var(--ember)" fillOpacity={opacityFor("External")} radius={[3, 3, 0, 0]} barSize={22} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>
