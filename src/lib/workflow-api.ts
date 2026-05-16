@@ -122,24 +122,31 @@ const seedBrief: GeneratedBrief = {
 // ---------- External quote types --------------------------------------------
 
 export type ExternalQuote = {
+  id?: string;
   text: string;
   source: string;
+  author?: string | null;
   theme: string | null;
   sentiment: "positive" | "neutral" | "negative" | string;
   relevance_score?: number;
   url?: string | null;
+  fetched_at?: string | null;
 };
 
 function seedExternalQuotes(): ExternalQuote[] {
   const out: ExternalQuote[] = [];
   for (const src of externalSources) {
+    let i = 0;
     for (const q of src.quotes) {
       out.push({
+        id: `seed-${src.id}-${i++}`,
         text: q.text,
         source: q.source,
+        author: q.author ?? null,
         theme: q.theme,
         sentiment: q.sentiment,
         relevance_score: 0.7,
+        fetched_at: q.date ?? null,
       });
     }
   }
