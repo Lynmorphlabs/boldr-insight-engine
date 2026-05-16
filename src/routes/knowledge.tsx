@@ -29,7 +29,7 @@ function statusTone(s: KbStatus) {
 
 function KnowledgePage() {
   const [activeSource, setActiveSource] = useState<string>("All");
-  const syncAll = useServerFn(triggerKbSyncAll);
+  const syncAll = syncAllKnowledgeSourcesApi;
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
 
