@@ -37,6 +37,7 @@ import {
   SHOPIFY_CONNECTION_MODE,
   type ShopifyLookup,
 } from "@/lib/shopify-ops";
+import { Webhooks } from "@/lib/webhooks";
 
 // "Routed to" only makes sense when it points OUTSIDE the CS desk
 // (e.g. service centre, Shopify ops, B2B). The user of this app IS cs@boldr.co.
@@ -152,6 +153,11 @@ function InboxPage() {
       window.localStorage.removeItem(MOCK_TICKET_STATE_STORAGE_KEY);
     }
     setMockTicketState({});
+    // Notify backend that the inbox list was requested on this session.
+    Webhooks.ticketListRequested({
+      filters: { lane: "all", persona: "all", status: "all" },
+      count: tickets.length,
+    });
   }, []);
 
   const visibleTickets = useMemo(
@@ -176,6 +182,31 @@ function InboxPage() {
 
   const [selectedId, setSelectedId] = useState(tickets[0]?.id ?? "");
   const selected = visibleTickets.find((t) => t.id === selectedId) ?? filtered[0] ?? visibleTickets[0];
+
+  // Notify backend whenever a ticket is opened in the detail pane.
+  useEffect(() => {
+    if (!selected) return;
+    Webhooks.ticketDetailsRequested({
+      ticketId: selected.id,
+      lane: selected.lane,
+      persona: selected.persona,
+      status: selected.status,
+      isKnowledgeGap: selected.isKnowledgeGap,
+    });
+    if (selected.isKnowledgeGap) {
+      Webhooks.ticketKnowledgeGapDetected({
+        ticketId: selected.id,
+        intent: selected.intent,
+        lane: selected.lane,
+      });
+    }
+    Webhooks.ticketPersonaDetected({
+      ticketId: selected.id,
+      persona: selected.persona,
+      confidence: selected.classifyConfidence,
+    });
+  }, [selected?.id]);
+
 
   function updateMockTicketState(ticketId: string, patch: PersistedTicketState) {
     setMockTicketState((current) => {
@@ -532,9 +563,35 @@ function KbGapForm({
       const kbSave = { kbId, draft: asDraft };
       setStatus("idle");
       setSaved(kbSave);
+      const nextStatus: TicketStatus = asDraft ? "pending_reply" : "resolved";
       onUpdateMockTicketState(ticket.id, {
         kbSave,
-        status: asDraft ? "pending_reply" : "resolved",
+        status: nextStatus,
+      });
+      // Workflow notifications — KB entry, gap resolution, ticket status, reply.
+      Webhooks.knowledgeEntryCreated({
+        kbId,
+        ticketId: ticket.id,
+        category,
+        question,
+        answer: answer.trim(),
+        sourceOfTruth: source,
+        draft: asDraft,
+      });
+      if (!asDraft) {
+        Webhooks.knowledgeGapResolved({ ticketId: ticket.id, kbId });
+        Webhooks.ticketReplySent({
+          ticketId: ticket.id,
+          customer: ticket.customer,
+          body: reply,
+          kbId,
+        });
+        Webhooks.ticketResolved({ ticketId: ticket.id, kbId });
+      }
+      Webhooks.ticketStatusChanged({
+        ticketId: ticket.id,
+        from: ticket.status,
+        to: nextStatus,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
@@ -772,6 +829,24 @@ function DraftReplyCard({ ticket }: { ticket: Ticket }) {
           onClick={() => {
             setSent(true);
             toast.success(`Reply sent to ${ticket.customer}`);
+            Webhooks.ticketAiReplyGenerated({
+              ticketId: ticket.id,
+              kbId: topMatch?.kbId,
+              similarity: topMatch?.similarity,
+            });
+            Webhooks.ticketReplySent({
+              ticketId: ticket.id,
+              customer: ticket.customer,
+              body,
+              kbId: topMatch?.kbId,
+              source: "drafted",
+            });
+            Webhooks.ticketResolved({ ticketId: ticket.id });
+            Webhooks.ticketStatusChanged({
+              ticketId: ticket.id,
+              from: ticket.status,
+              to: "resolved",
+            });
           }}
           disabled={!body.trim()}
           className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"
@@ -843,6 +918,18 @@ function ManualReplyCard({ ticket }: { ticket: Ticket }) {
           onClick={() => {
             setSent(true);
             toast.success(`Reply sent to ${ticket.customer}`);
+            Webhooks.ticketReplySent({
+              ticketId: ticket.id,
+              customer: ticket.customer,
+              body,
+              source: "manual",
+            });
+            Webhooks.ticketResolved({ ticketId: ticket.id });
+            Webhooks.ticketStatusChanged({
+              ticketId: ticket.id,
+              from: ticket.status,
+              to: "resolved",
+            });
           }}
           disabled={!body.trim()}
           className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"
@@ -1005,6 +1092,19 @@ function ShopifyOpsCard({ ticket }: { ticket: Ticket }) {
                   }
                   setSent(true);
                   toast.success(`Reply sent to ${ticket.customer}`);
+                  Webhooks.ticketReplySent({
+                    ticketId: ticket.id,
+                    customer: ticket.customer,
+                    body,
+                    source: "shopify_ops",
+                    lookupKind: lookup.kind,
+                  });
+                  Webhooks.ticketResolved({ ticketId: ticket.id });
+                  Webhooks.ticketStatusChanged({
+                    ticketId: ticket.id,
+                    from: ticket.status,
+                    to: "resolved",
+                  });
                 }}
                 disabled={!body.trim()}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { copilotResponses, tickets, externalSources, type CopilotResponse } from "@/data";
+import { Webhooks } from "@/lib/webhooks";
 
 export type Turn =
   | { role: "user"; id: string; text: string }
@@ -183,6 +184,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     const key = citationKey(c);
     setCitationTabs((prev) => (prev.some((p) => citationKey(p) === key) ? prev : [...prev, c]));
     setActiveCitationId(key);
+    Webhooks.aiCitationAttached({ type: c.type, id: c.id, label: c.label });
   }, []);
 
   const setActiveCitation = useCallback((id: string) => setActiveCitationId(id), []);
@@ -225,12 +227,20 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
         { role: "assistant", id: aid, pending: true },
       ];
     });
+    // Notify backend of the question. Differentiate first prompt from
+    // follow-ups so workflows can branch on conversation continuation.
+    const isFollowUp = priorUserPrompt.length > 0;
+    if (isFollowUp) {
+      Webhooks.aiConversationContinued({ prompt: trimmed, priorPrompt: priorUserPrompt, turnId: uid });
+    } else {
+      Webhooks.aiConversationCreated({ prompt: trimmed, turnId: uid });
+    }
+    Webhooks.aiQuestionAsked({ prompt: trimmed, turnId: uid, followUp: isFollowUp });
     setTimeout(() => {
       // First, try to match a curated response for the seeded prompts.
       // For anything else (i.e. real follow-ups), synthesize a smart-sounding
       // mock answer grounded in real tickets + external quotes.
       const curated = exactOrFuzzy(trimmed);
-      const isFollowUp = priorUserPrompt.length > 0;
       const answer = !isFollowUp && curated
         ? curated
         : synthesizeFollowUp(trimmed, priorUserPrompt || trimmed);
@@ -239,10 +249,18 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
           turn.id === aid ? { role: "assistant", id: aid, pending: false, answer } : turn,
         ),
       );
+      Webhooks.aiResponseGenerated({
+        turnId: aid,
+        prompt: trimmed,
+        citationCount: answer.citations.length,
+      });
     }, 600);
   }, []);
 
-  const reset = useCallback(() => setTurns([]), []);
+  const reset = useCallback(() => {
+    Webhooks.aiConversationArchived({ turnCount: turns.length });
+    setTurns([]);
+  }, [turns.length]);
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
   // ⌘K / Ctrl+K and Escape

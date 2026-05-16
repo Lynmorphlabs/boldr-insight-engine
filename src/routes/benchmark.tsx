@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { toast } from "sonner";
 import { syncExternalSentiment, getExternalQuotes } from "@/lib/sentiment.functions";
 import { INTERNAL_TO_EXTERNAL } from "@/lib/sentiment-themes";
+import { Webhooks } from "@/lib/webhooks";
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -49,7 +50,10 @@ function BenchmarkPage() {
   const quotes = quotesData?.quotes ?? [];
 
   const syncMut = useMutation({
-    mutationFn: () => syncFn(),
+    mutationFn: () => {
+      Webhooks.sentimentRefreshTriggered({ trigger: "manual" });
+      return syncFn();
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["external-quotes"] });
       if (res.fallback) {
@@ -61,6 +65,11 @@ function BenchmarkPage() {
           description: res.errors?.length ? `Partial: ${res.errors.join(" · ")}` : undefined,
         });
       }
+      Webhooks.externalSentimentSynced({
+        inserted: res.inserted,
+        fallback: res.fallback,
+        errors: res.errors,
+      });
     },
     onError: (e) => toast.error("Sync failed", { description: (e as Error).message }),
   });
@@ -75,6 +84,24 @@ function BenchmarkPage() {
       syncMut.mutate();
     }
   }, [quotesLoading, quotes.length, syncMut]);
+
+  // Notify backend on quote reads + benchmark/competitor view.
+  useEffect(() => {
+    if (!quotesLoading) {
+      Webhooks.sentimentQuotesFetched({ count: quotes.length });
+    }
+  }, [quotesLoading, quotes.length]);
+
+  useEffect(() => {
+    Webhooks.competitorBenchmarkFetched({
+      sources: externalSources.map((s) => s.name),
+      themes: themes.map((t) => t.name),
+    });
+    Webhooks.benchmarkComparisonGenerated({
+      themeCount: themes.length,
+      sources: externalSources.length,
+    });
+  }, []);
 
   // Single source of truth: `themes` drives the benchmark table, the chart,
   // and the per-theme verdict cards. Live `quotes` only feed the drill-down.

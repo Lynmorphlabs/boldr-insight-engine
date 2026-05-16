@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { PersonaChip } from "./inbox";
 import { getThemeClusters, getLatestBrief, regenerateBrief } from "@/lib/intelligence.functions";
+import { Webhooks } from "@/lib/webhooks";
 
 export const Route = createFileRoute("/intelligence")({
   head: () => ({
@@ -54,11 +55,17 @@ function IntelligencePage() {
   const brief = briefData?.brief ?? null;
 
   const regenMut = useMutation({
-    mutationFn: () => regenBrief(),
-    onSuccess: () => {
+    mutationFn: () => {
+      Webhooks.intelligenceBriefRegenerated({ trigger: "manual" });
+      return regenBrief();
+    },
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["monthly-brief"] });
       toast.success("Monthly brief regenerated", {
         description: "Generated from live tickets + external sentiment.",
+      });
+      Webhooks.briefGenerated({
+        month: (res as { brief?: { month?: string } } | undefined)?.brief?.month,
       });
     },
     onError: (e) => toast.error("Brief generation failed", { description: (e as Error).message }),
@@ -77,10 +84,30 @@ function IntelligencePage() {
     }
   }, [briefLoading, brief, regenMut]);
 
+  // Notify backend of intelligence reads — clusters, personas, latest brief.
+  useEffect(() => {
+    if (clusters.length) {
+      Webhooks.themeInsightsGenerated({ count: clusters.length });
+    }
+  }, [clusters.length]);
+
+  useEffect(() => {
+    if (brief) {
+      Webhooks.latestBriefFetched({ month: brief.month, items: brief.items?.length });
+    }
+  }, [brief]);
+
   const personaDist = FIVE_PERSONAS.map((p) => ({
     persona: p,
     count: tickets.filter((t) => t.persona === p).length,
   }));
+
+  useEffect(() => {
+    Webhooks.personaBreakdownGenerated({
+      personas: personaDist.map((p) => ({ persona: p.persona, count: p.count })),
+      totalTickets: tickets.length,
+    });
+  }, []);
 
   const briefMonth = brief?.month ?? new Date().toLocaleString("en-GB", { month: "long", year: "numeric" });
 

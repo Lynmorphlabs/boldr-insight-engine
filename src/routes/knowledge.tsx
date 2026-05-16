@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { kbEntries, kbSources, kbGrowth, themes, type KbStatus } from "@/data";
 import { BookOpen, Check, FileText, Sparkles, ShieldCheck, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { triggerKbSyncAll } from "@/lib/kb-sync.functions";
+import { Webhooks } from "@/lib/webhooks";
 import {
   LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -33,9 +34,20 @@ function KnowledgePage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
 
+  // Initial list/sources webhooks fire once when the page mounts.
+  useEffect(() => {
+    Webhooks.knowledgeEntriesListed({ count: kbEntries.length });
+    Webhooks.knowledgeSourcesListed({
+      count: kbSources.length,
+      sources: kbSources.map((s) => s.name),
+    });
+  }, []);
+
   const handleSync = async () => {
     setSyncing(true);
     setSyncMsg(null);
+    Webhooks.knowledgeSyncStarted({ scope: "all" });
+    Webhooks.knowledgeBaseSyncTriggered({ scope: "all" });
     try {
       const results = await syncAll();
       const entries = Object.entries(results);
@@ -43,11 +55,15 @@ function KnowledgePage() {
       if (failed.length === 0) {
         const total = entries.reduce((sum, [, r]) => sum + ((r as { total?: number }).total ?? 0), 0);
         setSyncMsg({ tone: "ok", text: `Synced ${entries.length} sources · ${total} entries` });
+        Webhooks.allKnowledgeSourcesSynced({ sources: entries.length, totalEntries: total });
+        Webhooks.knowledgeSyncCompleted({ sources: entries.length, totalEntries: total });
       } else {
         setSyncMsg({ tone: "err", text: `${failed.length} of ${entries.length} sources failed` });
+        Webhooks.knowledgeSyncFailed({ failed: failed.map(([k]) => k) });
       }
     } catch (err) {
       setSyncMsg({ tone: "err", text: err instanceof Error ? err.message : "Sync failed" });
+      Webhooks.knowledgeSyncFailed({ error: err instanceof Error ? err.message : String(err) });
     } finally {
       setSyncing(false);
     }
