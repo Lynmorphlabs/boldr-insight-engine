@@ -4,7 +4,8 @@ import { supabaseAdmin } from '@/integrations/supabase/client.server';
 import { z } from 'zod';
 
 export const triggerKbSyncAll = createServerFn({ method: 'POST' }).handler(async () => {
-  return await syncAllSources();
+  const results = await syncAllSources();
+  return JSON.parse(JSON.stringify(results)) as Record<string, unknown>;
 });
 
 export const triggerKbSyncOne = createServerFn({ method: 'POST' })
