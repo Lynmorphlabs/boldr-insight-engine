@@ -20,7 +20,7 @@
  *  5. Engraving 21–40 chars = SGD 40 everywhere (see kbConflicts — resolved).
  * ========================================================================== */
 
-export type Lane =
+export type LaneNew =
   | 'Knowledge gap'
   | 'Servicing'
   | 'Product general'
@@ -37,12 +37,12 @@ export type Persona =
   | 'Sustainability Advocate'
   | '—'; // null bucket — transactional / ops, no marketing signal
 
-export type TicketStatus = 'Resolved' | 'Pending reply' | 'In triage' | 'Escalated';
-export type Channel = 'Email' | 'Chat' | 'Instagram DM' | 'WhatsApp';
+export type TicketStatusNew = 'Resolved' | 'Pending reply' | 'In triage' | 'Escalated';
+export type ChannelNew = 'Email' | 'Chat' | 'Instagram DM' | 'WhatsApp';
 export type KbStatus = 'Live' | 'Pending approval' | 'Auto-drafted';
 export type Verdict = 'Boldr-Specific Gap' | 'Market-Wide Opportunity';
 
-export interface Ticket {
+export interface TicketNew {
   id: string;
   date: string;
   customer: string;
@@ -87,7 +87,7 @@ export interface KbConflict {
   affectedKbEntry: string;
 }
 
-export interface Theme {
+export interface ThemeNew {
   id: string;
   name: string;
   internalTickets: number;
@@ -106,7 +106,7 @@ export interface ExternalMention {
   sentiment: 'positive' | 'neutral' | 'negative';
 }
 
-export interface ExternalSource {
+export interface ExternalSourceNew {
   id: number;
   name: string;
   justification: string;
@@ -210,7 +210,7 @@ export const personas = [
  * Order-status / generic pre-purchase tickets are persona '—' by design.
  * -------------------------------------------------------------------------- */
 
-export const tickets: Ticket[] = [
+export const ticketsNew: TicketNew[] = [
   {
     id: 'TKT-1046', date: '2025-11-15', customer: 'Lily Shah', email: 'lily_shah@gmail.com',
     channel: 'Chat', lane: 'Knowledge gap', subject: 'Magnetic field resistance',
@@ -1016,7 +1016,7 @@ export const kbConflicts: KbConflict[] = [
  * THEMES — for the bonus benchmarking page. Internal counts match the brief.
  * -------------------------------------------------------------------------- */
 
-export const themes: Theme[] = [
+export const themesNew: ThemeNew[] = [
   {
     id: 'TH-01', name: 'BPA-Free Straps', internalTickets: 3, externalMentions: 16,
     externalSentiment: 'Positive and curious — buyers surprised it is not advertised',
@@ -1059,7 +1059,7 @@ export const themes: Theme[] = [
  * Mentions are illustrative seed quotes for the demo.
  * -------------------------------------------------------------------------- */
 
-export const externalSources: ExternalSource[] = [
+export const externalSourcesNew: ExternalSourceNew[] = [
   {
     id: 1,
     name: 'r/Watches + WatchUSeek forums',
@@ -1111,7 +1111,7 @@ export const externalSources: ExternalSource[] = [
  * MONTHLY MARKETING BRIEF — the headline output of the intelligence loop.
  * -------------------------------------------------------------------------- */
 
-export const monthlyBrief = {
+export const monthlyBriefNew = {
   title: 'What customers are asking that is not on your product pages',
   period: 'May 2026',
   summary: 'Five themes surfaced from this month\'s ticket flow, cross-validated against external market sentiment. Four are market-wide opportunities; one is a Boldr-specific product-page gap.',
