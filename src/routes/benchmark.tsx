@@ -76,38 +76,19 @@ function BenchmarkPage() {
     }
   }, [quotesLoading, quotes.length, syncMut]);
 
-  // External counts per theme bucket
-  const externalCounts = useMemo(() => {
-    const counts = new Map<ThemeName, number>();
-    for (const t of THEMES) counts.set(t, 0);
-    for (const q of quotes) {
-      if (q.theme && counts.has(q.theme as ThemeName)) {
-        counts.set(q.theme as ThemeName, (counts.get(q.theme as ThemeName) ?? 0) + 1);
-      }
-    }
-    return counts;
-  }, [quotes]);
-
-  // Aggregate internal counts per external-theme bucket
-  const internalCounts = useMemo(() => {
-    const counts = new Map<ThemeName, number>();
-    for (const t of THEMES) counts.set(t, 0);
-    for (const theme of themes) {
-      const bucket = INTERNAL_TO_EXTERNAL[theme.name];
-      if (bucket) counts.set(bucket, (counts.get(bucket) ?? 0) + theme.internalCount);
-    }
-    // tickets we don't have internal data for stay at 0
-    return counts;
-  }, []);
-
-  const signalRows = useMemo(() => {
-    return THEMES.map((t) => {
-      const internal = internalCounts.get(t) ?? 0;
-      const external = externalCounts.get(t) ?? 0;
-      const sig = classifySignal(internal, external);
-      return { theme: t, internal, external, ...sig };
-    });
-  }, [internalCounts, externalCounts]);
+  // Single source of truth: `themes` drives the benchmark table, the chart,
+  // and the per-theme verdict cards. Live `quotes` only feed the drill-down.
+  const signalRows = useMemo(
+    () =>
+      themes.map((t) => ({
+        name: t.name,
+        internal: t.internalCount,
+        external: t.externalVolume,
+        verdict: t.verdict,
+        action: t.recommendedAction || verdictAction(t.verdict),
+      })),
+    [],
+  );
 
   const chartData = themes.map((t) => ({
     name: t.name,
@@ -116,11 +97,12 @@ function BenchmarkPage() {
   }));
   const [hovered, setHovered] = useState<"Internal" | "External" | null>(null);
   const opacityFor = (key: "Internal" | "External") => (hovered && hovered !== key ? 0.22 : 1);
-  const [openTheme, setOpenTheme] = useState<ThemeName | null>(null);
-  const themeQuotes = useMemo(
-    () => (openTheme ? quotes.filter((q) => q.theme === openTheme) : []),
-    [openTheme, quotes],
-  );
+  const [openTheme, setOpenTheme] = useState<string | null>(null);
+  const themeQuotes = useMemo(() => {
+    if (!openTheme) return [];
+    const bucket = INTERNAL_TO_EXTERNAL[openTheme];
+    return bucket ? quotes.filter((q) => q.theme === bucket) : [];
+  }, [openTheme, quotes]);
 
   const lastSync = quotes[0]?.fetched_at ? new Date(quotes[0].fetched_at) : null;
 
