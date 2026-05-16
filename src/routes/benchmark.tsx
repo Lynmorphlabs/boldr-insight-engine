@@ -38,21 +38,16 @@ function verdictAction(v: Verdict): string {
 
 function BenchmarkPage() {
   const queryClient = useQueryClient();
-  const getQuotes = useServerFn(getExternalQuotes);
-  const syncFn = useServerFn(syncExternalSentiment);
 
   const { data: quotesData, isLoading: quotesLoading } = useQuery({
     queryKey: ["external-quotes"],
-    queryFn: () => getQuotes(),
+    queryFn: () => fetchExternalQuotes(),
     staleTime: 60_000,
   });
   const quotes = quotesData?.quotes ?? [];
 
   const syncMut = useMutation({
-    mutationFn: () => {
-      Webhooks.sentimentRefreshTriggered({ trigger: "manual" });
-      return syncFn();
-    },
+    mutationFn: () => syncExternalSentimentApi(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["external-quotes"] });
       if (res.fallback) {
