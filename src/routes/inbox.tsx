@@ -390,6 +390,8 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
   const [source, setSource] = useState<SourceOfTruth>("self");
   const [replyOverride, setReplyOverride] = useState<string | null>(null);
   const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
+  const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (saved) {
     return (
@@ -409,20 +411,35 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
     );
   }
 
-  const canSave = answer.trim().length > 0;
+  const canSave = answer.trim().length > 0 && status !== "saving";
   const autoReply = answer.trim()
     ? `Hi ${ticket.customer.split(" ")[0]},\n\nThanks for reaching out about Boldr. ${answer.trim()}\n\nLet me know if anything else is unclear.\n\n— Boldr Customer Care`
     : "";
   const reply = replyOverride ?? autoReply;
 
-  function save(asDraft: boolean) {
+  async function save(asDraft: boolean) {
+    setStatus("saving");
+    setErrorMsg(null);
     const kbId = `KB-${String(Math.floor(900 + Math.random() * 99)).padStart(3, "0")}`;
-    setSaved({ kbId, draft: asDraft });
-    toast.success(
-      asDraft
-        ? `${kbId} saved as draft (pending confirmation)`
-        : `${kbId} created · reply sent to ${ticket.customer}`,
-    );
+    const toastId = toast.loading(asDraft ? "Saving KB draft…" : "Saving KB & sending reply…");
+    try {
+      await new Promise((resolve, reject) =>
+        setTimeout(() => (Math.random() < 0.08 ? reject(new Error("Network hiccup — please retry")) : resolve(null)), 900),
+      );
+      toast.success(
+        asDraft
+          ? `${kbId} saved as draft (pending confirmation)`
+          : `${kbId} created · reply sent to ${ticket.customer}`,
+        { id: toastId },
+      );
+      setStatus("idle");
+      setSaved({ kbId, draft: asDraft });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(`Save failed · ${msg}`, { id: toastId });
+      setErrorMsg(msg);
+      setStatus("error");
+    }
   }
 
   return (
