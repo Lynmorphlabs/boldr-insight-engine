@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { themes, externalSources, type Verdict } from "@/data";
-import { Globe, Quote, AlertOctagon, Compass } from "lucide-react";
+import { Globe, Quote, AlertOctagon, Compass, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CopilotPanel } from "@/components/CopilotPanel";
+import { useCopilot } from "@/components/copilot-context";
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
