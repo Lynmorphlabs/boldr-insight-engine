@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { kbEntries, kbSources, kbGrowth, themes, type KbStatus } from "@/data";
-import { BookOpen, Check, FileText, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
+import { BookOpen, Check, FileText, Sparkles, ShieldCheck, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { triggerKbSyncAll } from "@/lib/kb-sync.functions";
 import {
   LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -27,6 +29,30 @@ function statusTone(s: KbStatus) {
 
 function KnowledgePage() {
   const [activeSource, setActiveSource] = useState<string>("All");
+  const syncAll = useServerFn(triggerKbSyncAll);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const results = await syncAll();
+      const entries = Object.entries(results);
+      const failed = entries.filter(([, r]) => r && (r as { ok?: boolean }).ok === false);
+      if (failed.length === 0) {
+        const total = entries.reduce((sum, [, r]) => sum + ((r as { total?: number }).total ?? 0), 0);
+        setSyncMsg({ tone: "ok", text: `Synced ${entries.length} sources · ${total} entries` });
+      } else {
+        setSyncMsg({ tone: "err", text: `${failed.length} of ${entries.length} sources failed` });
+      }
+    } catch (err) {
+      setSyncMsg({ tone: "err", text: err instanceof Error ? err.message : "Sync failed" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const filtered = useMemo(() => {
     if (activeSource === "All") return kbEntries;
     return kbEntries.filter((k) => k.source === activeSource);
@@ -64,7 +90,33 @@ function KnowledgePage() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-5">
         {/* Sources rail */}
         <aside className="space-y-1.5">
-          <div className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground px-1 mb-1">Sources</div>
+          <div className="flex items-center justify-between px-1 mb-1">
+            <div className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground">Sources</div>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className={cn(
+                "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.12em] transition-colors",
+                "text-ember hover:bg-ember/10 disabled:opacity-60 disabled:cursor-not-allowed",
+              )}
+              title="Pull latest content from Google Drive"
+            >
+              <RefreshCw className={cn("h-3 w-3", syncing && "animate-spin")} />
+              {syncing ? "Syncing…" : "Sync now"}
+            </button>
+          </div>
+          {syncMsg && (
+            <div
+              className={cn(
+                "mx-1 mb-1 rounded px-2 py-1.5 text-[11px] leading-snug",
+                syncMsg.tone === "ok"
+                  ? "bg-success-soft text-foreground"
+                  : "bg-ember/15 text-ember",
+              )}
+            >
+              {syncMsg.text}
+            </div>
+          )}
           <SourceButton label="All" count={kbEntries.length} active={activeSource === "All"} onClick={() => setActiveSource("All")} />
           {kbSources.map((s) => {
             const count = kbEntries.filter((e) => e.source === s.name).length;
