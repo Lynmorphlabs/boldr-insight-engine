@@ -21,7 +21,7 @@ import {
   MessageSquare,
   Send,
   X,
-  PlusCircle,
+  
   Inbox as InboxIcon,
   BookPlus,
 } from "lucide-react";
