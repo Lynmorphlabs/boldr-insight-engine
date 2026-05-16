@@ -17,10 +17,19 @@ const NAV = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const { location } = useRouterState();
+  const navigate = useNavigate();
   const pathname = location.pathname;
   const current = NAV.find((n) => pathname.startsWith(n.to)) ?? NAV[0];
+  const onBenchmark = pathname.startsWith("/benchmark");
+
+  function openCopilot() {
+    if (onBenchmark) {
+      document.getElementById("copilot")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      navigate({ to: "/benchmark", hash: "copilot" });
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
