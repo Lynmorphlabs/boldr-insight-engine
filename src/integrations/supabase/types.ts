@@ -108,31 +108,37 @@ export type Database = {
       }
       kb_synced_entries: {
         Row: {
-          answer: string
+          answer: string | null
           category: string | null
+          data: Json | null
           external_key: string
           id: string
-          question: string
+          question: string | null
           source_id: string
           synced_at: string
+          title: string | null
         }
         Insert: {
-          answer: string
+          answer?: string | null
           category?: string | null
+          data?: Json | null
           external_key: string
           id?: string
-          question: string
+          question?: string | null
           source_id: string
           synced_at?: string
+          title?: string | null
         }
         Update: {
-          answer?: string
+          answer?: string | null
           category?: string | null
+          data?: Json | null
           external_key?: string
           id?: string
-          question?: string
+          question?: string | null
           source_id?: string
           synced_at?: string
+          title?: string | null
         }
         Relationships: [
           {
