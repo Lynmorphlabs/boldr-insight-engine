@@ -103,14 +103,16 @@ function AppShellInner({ children }: { children: ReactNode }) {
             </span>
             <h1 className="font-display text-[20px] truncate gradient-text">{current.label}</h1>
           </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="group inline-flex items-center gap-2 rounded-full bg-surface-2 hairline-strong px-4 py-2 text-[12.5px] hover:bg-surface-2/70 transition-all hover:-translate-y-[1px]"
-          >
-            <span className="h-2 w-2 rounded-full gradient-brand" />
-            <span className="text-foreground/90">Ask your data</span>
-            <kbd className="ml-1 hidden sm:inline rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] text-muted-foreground border border-border">⌘K</kbd>
-          </button>
+          {pathname.startsWith("/benchmark") && (
+            <button
+              onClick={() => setOpen(true)}
+              className="group inline-flex items-center gap-2 rounded-full bg-surface-2 hairline-strong px-4 py-2 text-[12.5px] hover:bg-surface-2/70 transition-all hover:-translate-y-[1px]"
+            >
+              <span className="h-2 w-2 rounded-full gradient-brand" />
+              <span className="text-foreground/90">Ask your data</span>
+              <kbd className="ml-1 hidden sm:inline rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] text-muted-foreground border border-border">⌘K</kbd>
+            </button>
+          )}
         </header>
 
         <main className="flex-1 min-w-0">
