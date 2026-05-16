@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Inbox as InboxIcon,
   BookPlus,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -389,6 +390,8 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
   const [source, setSource] = useState<SourceOfTruth>("self");
   const [replyOverride, setReplyOverride] = useState<string | null>(null);
   const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
+  const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (saved) {
     return (
@@ -408,20 +411,35 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
     );
   }
 
-  const canSave = answer.trim().length > 0;
+  const canSave = answer.trim().length > 0 && status !== "saving";
   const autoReply = answer.trim()
     ? `Hi ${ticket.customer.split(" ")[0]},\n\nThanks for reaching out about Boldr. ${answer.trim()}\n\nLet me know if anything else is unclear.\n\n— Boldr Customer Care`
     : "";
   const reply = replyOverride ?? autoReply;
 
-  function save(asDraft: boolean) {
+  async function save(asDraft: boolean) {
+    setStatus("saving");
+    setErrorMsg(null);
     const kbId = `KB-${String(Math.floor(900 + Math.random() * 99)).padStart(3, "0")}`;
-    setSaved({ kbId, draft: asDraft });
-    toast.success(
-      asDraft
-        ? `${kbId} saved as draft (pending confirmation)`
-        : `${kbId} created · reply sent to ${ticket.customer}`,
-    );
+    const toastId = toast.loading(asDraft ? "Saving KB draft…" : "Saving KB & sending reply…");
+    try {
+      await new Promise((resolve, reject) =>
+        setTimeout(() => (Math.random() < 0.08 ? reject(new Error("Network hiccup — please retry")) : resolve(null)), 900),
+      );
+      toast.success(
+        asDraft
+          ? `${kbId} saved as draft (pending confirmation)`
+          : `${kbId} created · reply sent to ${ticket.customer}`,
+        { id: toastId },
+      );
+      setStatus("idle");
+      setSaved({ kbId, draft: asDraft });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(`Save failed · ${msg}`, { id: toastId });
+      setErrorMsg(msg);
+      setStatus("error");
+    }
   }
 
   return (
@@ -505,26 +523,53 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-1">
-        <span className="text-[10.5px] text-muted-foreground">
-          Born from {ticket.id} · {formatDate(ticket.date)}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => save(true)}
-            disabled={!answer.trim()}
-            className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Save draft
-          </button>
-          <button
-            onClick={() => save(source === "pending")}
-            disabled={!canSave}
-            className="inline-flex items-center gap-1.5 rounded-md bg-ember px-3 py-1.5 text-[12px] text-ember-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Check className="h-3 w-3" />
-            {source === "pending" ? "Save as draft" : "Save KB & reply"}
-          </button>
+      <div className="space-y-2 pt-1">
+        {status === "error" && errorMsg && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-2 text-[11.5px] text-destructive">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <div className="flex-1">
+              <div className="font-medium">Couldn't save</div>
+              <div className="text-destructive/80">{errorMsg}</div>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[10.5px] text-muted-foreground">
+            {status === "saving"
+              ? "Saving…"
+              : `Born from ${ticket.id} · ${formatDate(ticket.date)}`}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => save(true)}
+              disabled={!answer.trim() || status === "saving"}
+              className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Save draft
+            </button>
+            <button
+              onClick={() => save(source === "pending")}
+              disabled={!canSave}
+              className="inline-flex items-center gap-1.5 rounded-md bg-ember px-3 py-1.5 text-[12px] text-ember-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {status === "saving" ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Saving…
+                </>
+              ) : status === "error" ? (
+                <>
+                  <AlertTriangle className="h-3 w-3" />
+                  Retry save
+                </>
+              ) : (
+                <>
+                  <Check className="h-3 w-3" />
+                  {source === "pending" ? "Save as draft" : "Save KB & reply"}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
