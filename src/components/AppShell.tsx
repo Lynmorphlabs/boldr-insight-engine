@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Inbox,
   BookOpen,
@@ -8,6 +8,8 @@ import {
   Watch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CopilotProvider, useCopilot } from "./copilot-context";
+import { CopilotDrawer } from "./CopilotDrawer";
 
 const NAV = [
   { to: "/inbox", label: "Email Ops", icon: Inbox, hint: "Triage · draft · send" },
@@ -17,19 +19,19 @@ const NAV = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <CopilotProvider>
+      <AppShellInner>{children}</AppShellInner>
+      <CopilotDrawer />
+    </CopilotProvider>
+  );
+}
+
+function AppShellInner({ children }: { children: ReactNode }) {
+  const { setOpen } = useCopilot();
   const { location } = useRouterState();
-  const navigate = useNavigate();
   const pathname = location.pathname;
   const current = NAV.find((n) => pathname.startsWith(n.to)) ?? NAV[0];
-  const onBenchmark = pathname.startsWith("/benchmark");
-
-  function openCopilot() {
-    if (onBenchmark) {
-      document.getElementById("copilot")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else {
-      navigate({ to: "/benchmark", hash: "copilot" });
-    }
-  }
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -100,12 +102,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h1 className="font-display text-[20px] truncate gradient-text">{current.label}</h1>
           </div>
           <button
-            onClick={openCopilot}
+            onClick={() => setOpen(true)}
             className="group inline-flex items-center gap-2 rounded-full bg-surface-2 hairline-strong px-4 py-2 text-[12.5px] hover:bg-surface-2/70 transition-all hover:-translate-y-[1px]"
           >
             <span className="h-2 w-2 rounded-full gradient-brand" />
-            <span className="text-foreground/90">{onBenchmark ? "Jump to Copilot" : "Ask your data"}</span>
-            <span className="ml-1 hidden sm:inline text-[10.5px] text-muted-foreground">→ Benchmark</span>
+            <span className="text-foreground/90">Ask your data</span>
+            <kbd className="ml-1 hidden sm:inline rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] text-muted-foreground border border-border">⌘K</kbd>
           </button>
         </header>
 

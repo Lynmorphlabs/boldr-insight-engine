@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { themes, externalSources, type Verdict } from "@/data";
-import { Globe, Quote, AlertOctagon, Compass } from "lucide-react";
+import { Globe, Quote, AlertOctagon, Compass, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CopilotPanel } from "@/components/CopilotPanel";
+import { useCopilot } from "@/components/copilot-context";
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
@@ -123,11 +123,9 @@ function BenchmarkPage() {
         </div>
       </section>
 
-      {/* Docked Copilot — drill deeper */}
-      <section id="copilot" className="mt-8 rounded-2xl hairline-strong bg-card/70 backdrop-blur p-5 relative overflow-hidden">
-        <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full gradient-brand opacity-[0.12] blur-3xl pointer-events-none" />
-        <CopilotPanel />
-      </section>
+      {/* Drill deeper CTA — opens the Copilot drawer */}
+      <CopilotCta />
+
 
       {/* Quotes */}
       <section className="mt-8">
@@ -149,5 +147,33 @@ function BenchmarkPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function CopilotCta() {
+  const { setOpen } = useCopilot();
+  return (
+    <section className="mt-8">
+      <button
+        onClick={() => setOpen(true)}
+        className="group w-full text-left rounded-2xl hairline-strong bg-card/70 backdrop-blur p-5 relative overflow-hidden hover:bg-surface-2/60 transition"
+      >
+        <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full gradient-brand opacity-[0.18] blur-3xl pointer-events-none" />
+        <div className="relative flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl gradient-brand flex items-center justify-center text-primary-foreground shadow-[0_10px_30px_-10px_oklch(0.78_0.13_295_/_0.6)] shrink-0">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[15px] font-semibold gradient-text inline-block">Drill deeper with the Copilot</div>
+            <p className="text-[12.5px] text-muted-foreground mt-0.5">
+              Ask follow-ups across internal tickets and external sources — e.g. "why is nickel allergy market-wide?" or "what are competitors doing about vegan straps?"
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-full gradient-brand text-primary-foreground px-4 py-2 text-[12px] font-semibold shrink-0 group-hover:brightness-110 transition">
+            Open Copilot <ArrowRight className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      </button>
+    </section>
   );
 }
