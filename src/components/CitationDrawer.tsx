@@ -1,6 +1,6 @@
-import { X, FileText, Globe, Mail, MessageSquare, Tag, AlertTriangle, CheckCircle2, Clock, ExternalLink, Quote } from "lucide-react";
+import { X, FileText, Globe, Mail, MessageSquare, Tag, AlertTriangle, CheckCircle2, Clock, ExternalLink, Quote, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCopilot } from "./copilot-context";
+import { useCopilot, getCitationKey, type CitationRef } from "./copilot-context";
 import { tickets, externalSources, formatDate, type Ticket, type ExternalQuote, type ExternalSource } from "@/data";
 
 function findTicket(id: string): Ticket | undefined {
