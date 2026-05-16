@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   tickets,
@@ -94,6 +94,43 @@ function statusTone(s: TicketStatus) {
   return STATUSES.find((x) => x.value === s)?.tone ?? "";
 }
 
+const MOCK_TICKET_STATE_STORAGE_KEY = "boldr-inbox-mock-ticket-state";
+
+type PersistedKbSave = { kbId: string; draft: boolean };
+type PersistedTicketState = {
+  status?: TicketStatus;
+  kbSave?: PersistedKbSave;
+};
+
+function readMockTicketState(): Record<string, PersistedTicketState> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.localStorage.getItem(MOCK_TICKET_STATE_STORAGE_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as Record<string, PersistedTicketState>;
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, value]) => {
+        if (!value || typeof value !== "object") return false;
+        const hasValidStatus = !value.status || ["open", "pending_reply", "resolved", "escalated"].includes(value.status);
+        const hasValidKbSave =
+          !value.kbSave ||
+          (typeof value.kbSave.kbId === "string" && typeof value.kbSave.draft === "boolean");
+
+        return hasValidStatus && hasValidKbSave;
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeMockTicketState(state: Record<string, PersistedTicketState>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(MOCK_TICKET_STATE_STORAGE_KEY, JSON.stringify(state));
+}
+
 function ChannelIcon({ channel }: { channel: string }) {
   if (channel === "email") return <Mail className="h-3 w-3" />;
   return <MessageSquare className="h-3 w-3" />;
@@ -105,9 +142,22 @@ function InboxPage() {
   const [status, setStatus] = useState<TicketStatus | "all">("all");
   const [kbOnly, setKbOnly] = useState<"all" | "yes" | "no">("all");
   const [escOnly, setEscOnly] = useState(false);
+  const [mockTicketState, setMockTicketState] = useState<Record<string, PersistedTicketState>>({});
+
+  useEffect(() => {
+    setMockTicketState(readMockTicketState());
+  }, []);
+
+  const visibleTickets = useMemo(
+    () => tickets.map((ticket) => ({
+      ...ticket,
+      status: mockTicketState[ticket.id]?.status ?? ticket.status,
+    })),
+    [mockTicketState],
+  );
 
   const filtered = useMemo(() => {
-    return tickets.filter((t) => {
+    return visibleTickets.filter((t) => {
       if (lane !== "all" && t.lane !== lane) return false;
       if (persona !== "all" && t.persona !== persona) return false;
       if (status !== "all" && t.status !== status) return false;
@@ -116,10 +166,24 @@ function InboxPage() {
       if (escOnly && !t.escalation) return false;
       return true;
     });
-  }, [lane, persona, status, kbOnly, escOnly]);
+  }, [visibleTickets, lane, persona, status, kbOnly, escOnly]);
 
-  const [selectedId, setSelectedId] = useState(filtered[0]?.id ?? tickets[0].id);
-  const selected = tickets.find((t) => t.id === selectedId) ?? filtered[0] ?? tickets[0];
+  const [selectedId, setSelectedId] = useState(tickets[0]?.id ?? "");
+  const selected = visibleTickets.find((t) => t.id === selectedId) ?? filtered[0] ?? visibleTickets[0];
+
+  function updateMockTicketState(ticketId: string, patch: PersistedTicketState) {
+    setMockTicketState((current) => {
+      const next = {
+        ...current,
+        [ticketId]: {
+          ...(current[ticketId] ?? {}),
+          ...patch,
+        },
+      };
+      writeMockTicketState(next);
+      return next;
+    });
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)_400px] h-[calc(100vh-3.5rem)] min-h-0">
@@ -131,7 +195,7 @@ function InboxPage() {
               <InboxIcon className="h-3.5 w-3.5 text-ember" />
               <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Inbox</span>
             </div>
-            <span className="text-[11px] text-muted-foreground">{filtered.length} / {tickets.length}</span>
+            <span className="text-[11px] text-muted-foreground">{filtered.length} / {visibleTickets.length}</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <FilterSelect value={lane} onChange={(v) => setLane(v as Lane | "all")} options={LANES.map((l) => ({ value: l.value, label: l.label }))} />
@@ -201,7 +265,7 @@ function InboxPage() {
 
       {/* RIGHT — AI panel */}
       <aside className="bg-surface min-h-0 overflow-y-auto">
-        <AiPanel ticket={selected} />
+         <AiPanel ticket={selected} persistedState={mockTicketState[selected.id]} onUpdateMockTicketState={updateMockTicketState} />
       </aside>
     </div>
   );
@@ -284,7 +348,15 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
   );
 }
 
-function AiPanel({ ticket }: { ticket: Ticket }) {
+function AiPanel({
+  ticket,
+  persistedState,
+  onUpdateMockTicketState,
+}: {
+  ticket: Ticket;
+  persistedState?: PersistedTicketState;
+  onUpdateMockTicketState: (ticketId: string, patch: PersistedTicketState) => void;
+}) {
   return (
     <div className="px-5 py-6 space-y-4 boldr-stagger">
       <div className="flex items-center gap-2">
@@ -373,7 +445,14 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
           )}
 
           {/* CS-authored KB entry form — the hero moment */}
-          {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
+          {ticket.isGap && (
+            <KbGapForm
+              key={ticket.id}
+              ticket={ticket}
+              persistedState={persistedState}
+              onUpdateMockTicketState={onUpdateMockTicketState}
+            />
+          )}
         </>
       )}
     </div>
@@ -382,16 +461,28 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
 
 type SourceOfTruth = "self" | "supplier" | "pending";
 
-function KbGapForm({ ticket }: { ticket: Ticket }) {
+function KbGapForm({
+  ticket,
+  persistedState,
+  onUpdateMockTicketState,
+}: {
+  ticket: Ticket;
+  persistedState?: PersistedTicketState;
+  onUpdateMockTicketState: (ticketId: string, patch: PersistedTicketState) => void;
+}) {
   const prefill = ticket.autoDraftKb;
   const [category, setCategory] = useState(prefill?.category ?? laneLabel(ticket.lane));
   const [question, setQuestion] = useState(prefill?.question ?? ticket.intent);
   const [answer, setAnswer] = useState("");
   const [source, setSource] = useState<SourceOfTruth>("self");
   const [replyOverride, setReplyOverride] = useState<string | null>(null);
-  const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
+  const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(persistedState?.kbSave ?? null);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSaved(persistedState?.kbSave ?? null);
+  }, [persistedState?.kbSave?.draft, persistedState?.kbSave?.kbId, ticket.id]);
 
   if (saved) {
     return (
@@ -432,8 +523,13 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
           : `${kbId} created · reply sent to ${ticket.customer}`,
         { id: toastId },
       );
+      const kbSave = { kbId, draft: asDraft };
       setStatus("idle");
-      setSaved({ kbId, draft: asDraft });
+      setSaved(kbSave);
+      onUpdateMockTicketState(ticket.id, {
+        kbSave,
+        status: asDraft ? "pending_reply" : "resolved",
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast.error(`Save failed · ${msg}`, { id: toastId });
