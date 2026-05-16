@@ -5,8 +5,8 @@ import {
   BookOpen,
   Sparkles,
   Telescope,
-  Watch,
 } from "lucide-react";
+import boldrLogo from "@/assets/boldr-logo.png";
 import { cn } from "@/lib/utils";
 import { CopilotProvider, useCopilot } from "./copilot-context";
 import { CopilotDrawer } from "./CopilotDrawer";
