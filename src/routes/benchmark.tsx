@@ -123,6 +123,12 @@ function BenchmarkPage() {
         </div>
       </section>
 
+      {/* Docked Copilot — drill deeper */}
+      <section id="copilot" className="mt-8 rounded-2xl hairline-strong bg-card/70 backdrop-blur p-5 relative overflow-hidden">
+        <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full gradient-brand opacity-[0.12] blur-3xl pointer-events-none" />
+        <CopilotPanel />
+      </section>
+
       {/* Quotes */}
       <section className="mt-8">
         <div className="flex items-baseline justify-between mb-3">
@@ -132,7 +138,7 @@ function BenchmarkPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {externalSources.flatMap((s) => s.quotes.map((q) => ({ src: s, q }))).map(({ src, q }, i) => (
             <article key={i} className="rounded-md hairline bg-card p-4">
-              <Quote className="h-3.5 w-3.5 text-ember" />
+              <Quote className="h-3.5 w-3.5 text-primary" />
               <p className="mt-2 text-[12.5px] text-foreground/90 leading-relaxed">"{q.text}"</p>
               <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground flex items-center justify-between gap-2">
                 <span><span className="text-foreground font-medium">{q.author}</span> · {q.source}</span>
