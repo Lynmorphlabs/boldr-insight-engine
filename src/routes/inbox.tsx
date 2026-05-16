@@ -153,6 +153,11 @@ function InboxPage() {
       window.localStorage.removeItem(MOCK_TICKET_STATE_STORAGE_KEY);
     }
     setMockTicketState({});
+    // Notify backend that the inbox list was requested on this session.
+    Webhooks.ticketListRequested({
+      filters: { lane: "all", persona: "all", status: "all" },
+      count: tickets.length,
+    });
   }, []);
 
   const visibleTickets = useMemo(
