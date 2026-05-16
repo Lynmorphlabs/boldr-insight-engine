@@ -33,14 +33,14 @@ export function CopilotDrawer() {
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="leading-tight">
-              <div className="text-[14px] font-semibold">Insights Copilot</div>
+              <div className="text-[14px] font-semibold">Insights Ai</div>
               <div className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground">Ask your data</div>
             </div>
           </div>
           <button
             onClick={() => setOpen(false)}
             className="p-2 rounded-full hover:bg-surface-2 text-muted-foreground hover:text-foreground transition"
-            aria-label="Close Copilot"
+            aria-label="Close Ai"
           >
             <X className="h-4 w-4" />
           </button>
