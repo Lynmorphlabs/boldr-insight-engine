@@ -71,7 +71,11 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
         e.preventDefault();
         setOpen((v) => !v);
       } else if (e.key === "Escape") {
-        setOpen(false);
+        setCitation((c) => {
+          if (c) return null;
+          setOpen(false);
+          return c;
+        });
       }
     }
     window.addEventListener("keydown", onKey);
