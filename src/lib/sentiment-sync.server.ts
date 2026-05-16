@@ -1,23 +1,7 @@
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
-
-export const THEMES = [
-  'Materials / skin safety',
-  'Sustainability / vegan straps',
-  'Titanium / durability / adventure use',
-  'Gifting / engraving / corporate orders',
-  'Servicing / battery / after-sales',
-] as const;
-
-export type ThemeName = (typeof THEMES)[number];
-
-// Map our internal `themes` table names → external theme buckets
-export const INTERNAL_TO_EXTERNAL: Record<string, ThemeName> = {
-  'BPA-Free Straps': 'Materials / skin safety',
-  'Nickel Allergy': 'Materials / skin safety',
-  'Titanium Safety': 'Titanium / durability / adventure use',
-  'Sustainability': 'Sustainability / vegan straps',
-  'Vegan Straps': 'Sustainability / vegan straps',
-};
+import { THEMES, type ThemeName } from './sentiment-themes';
+export { THEMES, INTERNAL_TO_EXTERNAL } from './sentiment-themes';
+export type { ThemeName } from './sentiment-themes';
 
 const SEARCH_TERMS = [
   'Boldr',

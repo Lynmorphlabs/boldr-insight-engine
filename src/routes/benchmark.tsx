@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { syncExternalSentiment, getExternalQuotes } from "@/lib/sentiment.functions";
-import { THEMES, INTERNAL_TO_EXTERNAL, type ThemeName } from "@/lib/sentiment-sync.server";
+import { THEMES, INTERNAL_TO_EXTERNAL, type ThemeName } from "@/lib/sentiment-themes";
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
