@@ -1,6 +1,6 @@
-import { X, FileText, Globe, Mail, MessageSquare, Tag, AlertTriangle, CheckCircle2, Clock, ExternalLink, Quote } from "lucide-react";
+import { X, FileText, Globe, Mail, MessageSquare, Tag, AlertTriangle, CheckCircle2, Clock, ExternalLink, Quote, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCopilot } from "./copilot-context";
+import { useCopilot, getCitationKey, type CitationRef } from "./copilot-context";
 import { tickets, externalSources, formatDate, type Ticket, type ExternalQuote, type ExternalSource } from "@/data";
 
 function findTicket(id: string): Ticket | undefined {
@@ -29,14 +29,21 @@ const sentimentTone: Record<ExternalQuote["sentiment"], string> = {
 };
 
 export function CitationDrawer() {
-  const { citation, closeCitation } = useCopilot();
-  const open = citation !== null;
+  const {
+    citationTabs,
+    activeCitation,
+    activeCitationId,
+    setActiveCitation,
+    closeCitationTab,
+    closeAllCitations,
+  } = useCopilot();
+  const open = citationTabs.length > 0;
 
   return (
     <>
       {/* Backdrop above copilot */}
       <div
-        onClick={closeCitation}
+        onClick={closeAllCitations}
         className={cn(
           "fixed inset-0 z-[55] bg-background/50 backdrop-blur-[2px] transition-opacity duration-200",
           open ? "opacity-100" : "opacity-0 pointer-events-none",
@@ -46,40 +53,85 @@ export function CitationDrawer() {
       <aside
         aria-hidden={!open}
         className={cn(
-          "fixed top-0 right-0 z-[60] h-screen w-full sm:w-[460px] bg-surface/95 backdrop-blur-xl border-l border-border shadow-[0_0_60px_-10px_oklch(0.1_0_0_/_0.7)] flex flex-col transition-transform duration-300 ease-out",
+          "fixed top-0 right-0 z-[60] h-screen w-full sm:w-[520px] bg-surface/95 backdrop-blur-xl border-l border-border shadow-[0_0_60px_-10px_oklch(0.1_0_0_/_0.7)] flex flex-col transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="absolute inset-y-0 left-0 w-px gradient-brand opacity-70 pointer-events-none" />
 
-        <header className="flex items-center justify-between px-5 h-16 border-b border-border shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-9 w-9 rounded-xl bg-surface-2 hairline flex items-center justify-center text-primary shrink-0">
-              {citation?.type === "ticket" ? <FileText className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-            </div>
-            <div className="leading-tight min-w-0">
-              <div className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground">
-                {citation?.type === "ticket" ? "Internal ticket" : "External source"}
-              </div>
-              <div className="text-[13.5px] font-semibold truncate">{citation?.id}</div>
-            </div>
+        <header className="flex items-center justify-between px-5 h-14 border-b border-border shrink-0">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            <Layers className="h-3.5 w-3.5 text-primary" />
+            Evidence · {citationTabs.length} open
           </div>
           <button
-            onClick={closeCitation}
-            className="p-2 rounded-full hover:bg-surface-2 text-muted-foreground hover:text-foreground transition"
-            aria-label="Close citation"
+            onClick={closeAllCitations}
+            className="inline-flex items-center gap-1.5 rounded-full hairline bg-surface-2/50 px-3 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition"
+            aria-label="Close all citations"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" /> Close all
           </button>
         </header>
 
+        {/* Tab strip */}
+        <div className="px-3 pt-2 pb-1 border-b border-border shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-1.5 min-w-min">
+            {citationTabs.map((c) => {
+              const key = getCitationKey(c);
+              const isActive = key === activeCitationId;
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "group inline-flex items-center gap-1.5 rounded-t-lg px-2.5 py-1.5 text-[11.5px] border-b-2 transition cursor-pointer max-w-[200px]",
+                    isActive
+                      ? "bg-surface-2/70 border-primary text-foreground hairline-strong border-b-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2/40",
+                  )}
+                  onClick={() => setActiveCitation(key)}
+                >
+                  {c.type === "ticket" ? <FileText className="h-3 w-3 shrink-0" /> : <Globe className="h-3 w-3 shrink-0" />}
+                  <span className="truncate font-medium">{c.id}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); closeCitationTab(key); }}
+                    className="p-0.5 rounded hover:bg-background/60 text-muted-foreground hover:text-foreground transition"
+                    aria-label={`Close ${c.id}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active panel header */}
+        {activeCitation && (
+          <div className="flex items-center gap-2.5 px-5 py-3 border-b border-border shrink-0">
+            <div className="h-8 w-8 rounded-lg bg-surface-2 hairline flex items-center justify-center text-primary shrink-0">
+              {activeCitation.type === "ticket" ? <FileText className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+            </div>
+            <div className="leading-tight min-w-0">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {activeCitation.type === "ticket" ? "Internal ticket" : "External source"}
+              </div>
+              <div className="text-[13px] font-semibold truncate">{activeCitation.id}</div>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
-          {citation?.type === "ticket" ? <TicketDetail id={citation.id} fallback={citation.label} /> : null}
-          {citation?.type === "external" ? <ExternalDetail id={citation.id} fallback={citation.label} quote={citation.quote} /> : null}
+          {activeCitation ? <ActivePanel citation={activeCitation} /> : null}
         </div>
       </aside>
     </>
   );
+}
+
+function ActivePanel({ citation }: { citation: CitationRef }) {
+  if (citation.type === "ticket") return <TicketDetail id={citation.id} fallback={citation.label} />;
+  return <ExternalDetail id={citation.id} fallback={citation.label} quote={citation.quote} />;
 }
 
 function TicketDetail({ id, fallback }: { id: string; fallback: string }) {
