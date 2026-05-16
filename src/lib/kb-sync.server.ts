@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
+import type { Json } from '@/integrations/supabase/types';
 
 type SourceRow = {
   id: string;
@@ -13,7 +14,7 @@ type Entry = {
   question: string | null;
   answer: string | null;
   category: string | null;
-  data: Record<string, unknown> | null;
+  data: Json | null;
 };
 
 // --- CSV parser (handles quoted fields, embedded commas, escaped quotes) ---
