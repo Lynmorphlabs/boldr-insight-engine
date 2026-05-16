@@ -15,6 +15,8 @@ function matchResponse(prompt: string): CopilotResponse {
   return fuzzy ?? copilotResponses[0];
 }
 
+export type CitationRef = { type: "ticket" | "external"; id: string; label: string; quote?: string };
+
 type Ctx = {
   open: boolean;
   setOpen: (v: boolean) => void;
@@ -22,6 +24,9 @@ type Ctx = {
   turns: Turn[];
   ask: (prompt: string) => void;
   reset: () => void;
+  citation: CitationRef | null;
+  openCitation: (c: CitationRef) => void;
+  closeCitation: () => void;
 };
 
 const CopilotContext = createContext<Ctx | null>(null);
