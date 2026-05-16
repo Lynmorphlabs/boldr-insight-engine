@@ -1184,3 +1184,250 @@ export const copilotAnswers: Record<string, { answer: string; sources: string[] 
     sources: ['theme: Nickel Allergy', 'theme: BPA-Free Straps', 'monthly brief — May 2026'],
   },
 };
+
+/* ============================================================================
+ * LEGACY COMPATIBILITY LAYER
+ * The canonical seed above is the source of truth. This layer adapts it to
+ * the shapes the rest of the app currently consumes. Do not extend — refactor
+ * consumers onto the canonical exports above instead.
+ * ========================================================================== */
+
+export type Lane =
+  | "knowledge_gap" | "servicing" | "product_general" | "materials_safety"
+  | "strap_compatibility" | "order_status" | "engraving";
+export type TicketStatus = "open" | "pending_reply" | "resolved" | "escalated";
+export type Channel = string;
+
+const LANE_MAP: Record<LaneNew, Lane> = {
+  "Knowledge gap": "knowledge_gap",
+  "Servicing": "servicing",
+  "Product general": "product_general",
+  "Materials & safety": "materials_safety",
+  "Strap compatibility": "strap_compatibility",
+  "Order status": "order_status",
+  "Engraving": "engraving",
+};
+const STATUS_MAP: Record<TicketStatusNew, TicketStatus> = {
+  "Resolved": "resolved",
+  "Pending reply": "pending_reply",
+  "In triage": "open",
+  "Escalated": "escalated",
+};
+const CHANNEL_MAP: Record<ChannelNew, string> = {
+  "Email": "email",
+  "Chat": "chat",
+  "Instagram DM": "instagram_dm",
+  "WhatsApp": "whatsapp",
+};
+
+export interface Ticket {
+  id: string;
+  date: string;
+  customer: string;
+  email: string;
+  orderId?: string;
+  channel: string;
+  lane: Lane;
+  subject: string;
+  body: string;
+  status: TicketStatus;
+  answeredByKb: boolean;
+  escalation: boolean;            // ← legacy alias for requiresEscalation
+  isKnowledgeGap: boolean;        // canonical attribute (detail-only)
+  requiresEscalation: boolean;    // canonical attribute (detail-only)
+  persona: Persona;
+  confidence: number;             // 0-1, legacy
+  classifyConfidence: number;     // 0-100, canonical — confidence in CLASSIFICATION
+  intent: string;
+  kbMatch?: string;
+  kbMatchScore?: number;          // present only when answeredByKb is true
+  kbMatches?: { kbId: string; similarity: number }[];
+  isGap?: boolean;                // legacy alias for isKnowledgeGap
+  draftReply?: string;            // legacy alias for draftedReply
+  draftedReply?: string;
+  autoKbEntry?: string;
+  autoDraftKb?: { question: string; answer: string; category: string };
+  routedTo?: string;
+}
+
+export const tickets: Ticket[] = ticketsNew.map((t) => {
+  const lane = LANE_MAP[t.lane];
+  const status = STATUS_MAP[t.status];
+  const channel = CHANNEL_MAP[t.channel];
+  const kbMatches = t.answeredByKb && t.kbMatch && t.kbMatchScore != null
+    ? [{ kbId: t.kbMatch, similarity: t.kbMatchScore / 100 }]
+    : undefined;
+  let autoDraftKb: Ticket["autoDraftKb"] | undefined;
+  if (t.autoKbEntry) {
+    const kb = kbEntries.find((k) => k.id === t.autoKbEntry);
+    if (kb) autoDraftKb = { question: kb.question, answer: kb.answer, category: kb.category };
+  }
+  return {
+    id: t.id, date: t.date, customer: t.customer, email: t.email, orderId: t.orderId,
+    channel, lane, subject: t.subject, body: t.body, status,
+    answeredByKb: t.answeredByKb,
+    escalation: t.requiresEscalation,
+    isKnowledgeGap: t.isKnowledgeGap,
+    requiresEscalation: t.requiresEscalation,
+    persona: t.persona,
+    confidence: t.classifyConfidence / 100,
+    classifyConfidence: t.classifyConfidence,
+    intent: t.subject,
+    kbMatch: t.answeredByKb ? t.kbMatch : undefined,
+    kbMatchScore: t.answeredByKb ? t.kbMatchScore : undefined,
+    kbMatches,
+    isGap: t.isKnowledgeGap,
+    draftReply: t.draftedReply,
+    draftedReply: t.draftedReply,
+    autoKbEntry: t.autoKbEntry,
+    autoDraftKb,
+    routedTo: t.routedTo,
+  };
+});
+
+export interface Theme {
+  name: string;
+  internalCount: number;
+  trend: "up" | "down" | "flat";
+  trendPct: number;
+  dominantPersona: Persona;
+  externalVolume: number;
+  externalSentiment: string;
+  verdict: Verdict;
+  recommendedAction: string;
+  briefNote: string;
+  id: string;
+}
+
+const THEME_PERSONA: Record<string, Persona> = {
+  "BPA-Free Straps": "Health-Conscious Buyer",
+  "Titanium Safety": "Enthusiast / Collector",
+  "Sustainability": "Sustainability Advocate",
+  "Nickel Allergy": "Health-Conscious Buyer",
+  "Vegan Straps": "Sustainability Advocate",
+};
+
+export const themes: Theme[] = themesNew.map((t) => ({
+  id: t.id,
+  name: t.name,
+  internalCount: t.internalTickets,
+  trend: "up",
+  trendPct: 0,
+  dominantPersona: THEME_PERSONA[t.name] ?? "—",
+  externalVolume: t.externalMentions,
+  externalSentiment: t.externalSentiment,
+  verdict: t.verdict,
+  recommendedAction: t.recommendedAction,
+  briefNote: t.insight,
+}));
+
+export interface ExternalQuote {
+  text: string;
+  author: string;
+  source: string;
+  sentiment: "positive" | "neutral" | "negative";
+  theme: string;
+  date: string;
+}
+export interface ExternalSource {
+  id: number;
+  name: string;
+  justification: string;
+  quotes: ExternalQuote[];
+}
+
+export const externalSources: ExternalSource[] = externalSourcesNew.map((s) => ({
+  id: s.id,
+  name: s.name,
+  justification: s.justification,
+  quotes: s.mentions.map((m) => ({
+    text: m.snippet,
+    author: m.handle,
+    source: m.source,
+    sentiment: m.sentiment,
+    theme: m.theme,
+    date: "2026-05-01",
+  })),
+}));
+
+export const monthlyBrief = {
+  month: monthlyBriefNew.period,
+  title: monthlyBriefNew.title,
+  intro: monthlyBriefNew.summary,
+  items: monthlyBriefNew.topThemes.map((it) => {
+    const theme = themesNew.find((t) => t.name === it.theme);
+    return {
+      theme: it.theme,
+      personas: it.personas as Persona[],
+      gap: theme?.insight ?? "",
+      action: it.action,
+    };
+  }),
+};
+
+export const kbSources = Array.from(
+  new Set(kbEntries.map((k) => k.source)),
+).map((name) => ({
+  name,
+  description: name === "FAQ document"
+    ? "Customer-facing FAQ (the public help centre)."
+    : name === "CS SOP"
+    ? "Internal Customer Service SOP."
+    : name === "Servicing rate card"
+    ? "Servicing & repair price list."
+    : name === "Engraving rate card"
+    ? "Engraving price list."
+    : name === "Product specs sheet"
+    ? "Product specification sheets."
+    : name.startsWith("Auto-draft")
+    ? "Auto-drafted from resolved knowledge gaps."
+    : "Source document.",
+}));
+
+export const kbGrowth = engineMetrics.kbGrowthSeries.map((s) => ({
+  month: `${s.month} 2026`,
+  entries: s.entries,
+}));
+
+export function formatDate(d: string): string {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+  return dt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// --- Copilot legacy shape ---
+export interface CopilotResponse {
+  prompt: string;
+  insight: string;
+  citations: { type: "ticket" | "external"; id: string; label: string; quote?: string }[];
+}
+
+function parseCitation(raw: string): CopilotResponse["citations"][number] {
+  const tktMatch = raw.match(/^(TKT-\d+)/);
+  if (tktMatch) {
+    const id = tktMatch[1];
+    const t = tickets.find((x) => x.id === id);
+    return {
+      type: "ticket",
+      id,
+      label: t ? `${id} · ${t.subject}` : raw,
+      quote: t?.body,
+    };
+  }
+  // External — try to match by handle
+  for (const s of externalSources) {
+    const q = s.quotes.find((qu) => raw.includes(qu.author));
+    if (q) {
+      return { type: "external", id: q.author, label: `${q.source} · ${q.author}`, quote: q.text };
+    }
+  }
+  return { type: "external", id: raw, label: raw };
+}
+
+export const copilotResponses: CopilotResponse[] = Object.entries(copilotAnswers).map(
+  ([prompt, payload]) => ({
+    prompt,
+    insight: payload.answer,
+    citations: payload.sources.map(parseCitation),
+  }),
+);
