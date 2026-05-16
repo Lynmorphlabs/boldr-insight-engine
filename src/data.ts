@@ -48,11 +48,11 @@ export interface TicketNew {
   customer: string;
   email: string;
   orderId?: string;
-  channel: Channel;
-  lane: Lane;
+  channel: ChannelNew;
+  lane: LaneNew;
   subject: string;
   body: string;
-  status: TicketStatus;
+  status: TicketStatusNew;
   persona: Persona;
   answeredByKb: boolean;
   isKnowledgeGap: boolean;
