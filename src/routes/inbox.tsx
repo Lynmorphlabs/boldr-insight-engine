@@ -348,7 +348,15 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
   );
 }
 
-function AiPanel({ ticket }: { ticket: Ticket }) {
+function AiPanel({
+  ticket,
+  persistedState,
+  onUpdateMockTicketState,
+}: {
+  ticket: Ticket;
+  persistedState?: PersistedTicketState;
+  onUpdateMockTicketState: (ticketId: string, patch: PersistedTicketState) => void;
+}) {
   return (
     <div className="px-5 py-6 space-y-4 boldr-stagger">
       <div className="flex items-center gap-2">
@@ -437,7 +445,14 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
           )}
 
           {/* CS-authored KB entry form — the hero moment */}
-          {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
+          {ticket.isGap && (
+            <KbGapForm
+              key={ticket.id}
+              ticket={ticket}
+              persistedState={persistedState}
+              onUpdateMockTicketState={onUpdateMockTicketState}
+            />
+          )}
         </>
       )}
     </div>
@@ -446,16 +461,28 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
 
 type SourceOfTruth = "self" | "supplier" | "pending";
 
-function KbGapForm({ ticket }: { ticket: Ticket }) {
+function KbGapForm({
+  ticket,
+  persistedState,
+  onUpdateMockTicketState,
+}: {
+  ticket: Ticket;
+  persistedState?: PersistedTicketState;
+  onUpdateMockTicketState: (ticketId: string, patch: PersistedTicketState) => void;
+}) {
   const prefill = ticket.autoDraftKb;
   const [category, setCategory] = useState(prefill?.category ?? laneLabel(ticket.lane));
   const [question, setQuestion] = useState(prefill?.question ?? ticket.intent);
   const [answer, setAnswer] = useState("");
   const [source, setSource] = useState<SourceOfTruth>("self");
   const [replyOverride, setReplyOverride] = useState<string | null>(null);
-  const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
+  const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(persistedState?.kbSave ?? null);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSaved(persistedState?.kbSave ?? null);
+  }, [persistedState?.kbSave?.draft, persistedState?.kbSave?.kbId, ticket.id]);
 
   if (saved) {
     return (
@@ -496,8 +523,13 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
           : `${kbId} created · reply sent to ${ticket.customer}`,
         { id: toastId },
       );
+      const kbSave = { kbId, draft: asDraft };
       setStatus("idle");
-      setSaved({ kbId, draft: asDraft });
+      setSaved(kbSave);
+      onUpdateMockTicketState(ticket.id, {
+        kbSave,
+        status: asDraft ? "pending_reply" : "resolved",
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast.error(`Save failed · ${msg}`, { id: toastId });
