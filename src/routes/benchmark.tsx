@@ -56,7 +56,7 @@ function BenchmarkPage() {
   const getQuotes = useServerFn(getExternalQuotes);
   const syncFn = useServerFn(syncExternalSentiment);
 
-  const { data: quotesData } = useQuery({
+  const { data: quotesData, isLoading: quotesLoading } = useQuery({
     queryKey: ["external-quotes"],
     queryFn: () => getQuotes(),
     staleTime: 60_000,
