@@ -34,7 +34,11 @@ const CopilotContext = createContext<Ctx | null>(null);
 export function CopilotProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [citation, setCitation] = useState<CitationRef | null>(null);
   const seq = useRef(0);
+
+  const openCitation = useCallback((c: CitationRef) => setCitation(c), []);
+  const closeCitation = useCallback(() => setCitation(null), []);
 
   const ask = useCallback((prompt: string) => {
     const trimmed = prompt.trim();
