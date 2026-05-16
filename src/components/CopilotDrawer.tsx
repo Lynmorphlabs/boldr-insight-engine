@@ -40,7 +40,7 @@ export function CopilotDrawer() {
           <button
             onClick={() => setOpen(false)}
             className="p-2 rounded-full hover:bg-surface-2 text-muted-foreground hover:text-foreground transition"
-            aria-label="Close Copilot"
+            aria-label="Close Ai"
           >
             <X className="h-4 w-4" />
           </button>
