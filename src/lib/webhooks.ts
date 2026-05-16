@@ -189,7 +189,9 @@ export function fireWebhook<T = unknown>(
   payload: WebhookPayload = {},
   opts: WebhookOptions = {},
 ): Promise<T | null> {
-  const url = `${getBaseUrl()}/${event}`;
+  // Backend convention: every endpoint is `<eventName>Webhook`.
+  const endpoint = event.endsWith("Webhook") ? event : `${event}Webhook`;
+  const url = `${getBaseUrl()}/${endpoint}`;
   const body = JSON.stringify({
     event,
     timestamp: new Date().toISOString(),
