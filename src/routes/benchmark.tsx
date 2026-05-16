@@ -80,6 +80,17 @@ function BenchmarkPage() {
     onError: (e) => toast.error("Sync failed", { description: (e as Error).message }),
   });
 
+  // Auto-run sync once if external_quotes is empty on first load
+  const autoSyncTriggered = useRef(false);
+  useEffect(() => {
+    if (quotesLoading || autoSyncTriggered.current) return;
+    if (quotes.length === 0 && !syncMut.isPending) {
+      autoSyncTriggered.current = true;
+      toast.info("No external quotes yet — running first sync…");
+      syncMut.mutate();
+    }
+  }, [quotesLoading, quotes.length, syncMut]);
+
   // External counts per theme bucket
   const externalCounts = useMemo(() => {
     const counts = new Map<ThemeName, number>();
