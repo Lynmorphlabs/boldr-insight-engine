@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { themes, externalSources, type Verdict } from "@/data";
 import { Globe, Quote, AlertOctagon, Compass, RefreshCw, Sparkles } from "lucide-react";
@@ -8,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { syncExternalSentiment, getExternalQuotes } from "@/lib/sentiment.functions";
+import { fetchExternalQuotes, syncExternalSentimentApi } from "@/lib/workflow-api";
 import { INTERNAL_TO_EXTERNAL } from "@/lib/sentiment-themes";
 import { Webhooks } from "@/lib/webhooks";
 import {
@@ -39,21 +38,16 @@ function verdictAction(v: Verdict): string {
 
 function BenchmarkPage() {
   const queryClient = useQueryClient();
-  const getQuotes = useServerFn(getExternalQuotes);
-  const syncFn = useServerFn(syncExternalSentiment);
 
   const { data: quotesData, isLoading: quotesLoading } = useQuery({
     queryKey: ["external-quotes"],
-    queryFn: () => getQuotes(),
+    queryFn: () => fetchExternalQuotes(),
     staleTime: 60_000,
   });
   const quotes = quotesData?.quotes ?? [];
 
   const syncMut = useMutation({
-    mutationFn: () => {
-      Webhooks.sentimentRefreshTriggered({ trigger: "manual" });
-      return syncFn();
-    },
+    mutationFn: () => syncExternalSentimentApi(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["external-quotes"] });
       if (res.fallback) {

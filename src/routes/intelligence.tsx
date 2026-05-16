@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tickets, type Persona } from "@/data";
 import { ArrowDown, ArrowRight, ArrowUp, Download, RefreshCw, Sparkles } from "lucide-react";
@@ -11,7 +10,11 @@ import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { PersonaChip } from "./inbox";
-import { getThemeClusters, getLatestBrief, regenerateBrief } from "@/lib/intelligence.functions";
+import {
+  fetchThemeClusters,
+  fetchLatestBrief,
+  regenerateBriefApi,
+} from "@/lib/workflow-api";
 import { Webhooks } from "@/lib/webhooks";
 
 export const Route = createFileRoute("/intelligence")({
@@ -36,29 +39,23 @@ const FIVE_PERSONAS: Persona[] = [
 
 function IntelligencePage() {
   const queryClient = useQueryClient();
-  const fetchClusters = useServerFn(getThemeClusters);
-  const fetchBrief = useServerFn(getLatestBrief);
-  const regenBrief = useServerFn(regenerateBrief);
 
   const { data: clusterData } = useQuery({
     queryKey: ["theme-clusters"],
-    queryFn: () => fetchClusters(),
+    queryFn: () => fetchThemeClusters(),
     staleTime: 5 * 60_000,
   });
   const clusters = clusterData?.clusters ?? [];
 
   const { data: briefData, isLoading: briefLoading } = useQuery({
     queryKey: ["monthly-brief"],
-    queryFn: () => fetchBrief(),
+    queryFn: () => fetchLatestBrief(),
     staleTime: 60_000,
   });
   const brief = briefData?.brief ?? null;
 
   const regenMut = useMutation({
-    mutationFn: () => {
-      Webhooks.intelligenceBriefRegenerated({ trigger: "manual" });
-      return regenBrief();
-    },
+    mutationFn: () => regenerateBriefApi(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["monthly-brief"] });
       toast.success("Monthly brief regenerated", {
