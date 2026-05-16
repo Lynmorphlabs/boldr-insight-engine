@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      external_quotes: {
+        Row: {
+          author: string | null
+          external_key: string
+          fetched_at: string
+          id: string
+          relevance_score: number | null
+          search_term: string | null
+          sentiment: string | null
+          source: string
+          text: string
+          theme: string | null
+          url: string | null
+        }
+        Insert: {
+          author?: string | null
+          external_key: string
+          fetched_at?: string
+          id?: string
+          relevance_score?: number | null
+          search_term?: string | null
+          sentiment?: string | null
+          source: string
+          text: string
+          theme?: string | null
+          url?: string | null
+        }
+        Update: {
+          author?: string | null
+          external_key?: string
+          fetched_at?: string
+          id?: string
+          relevance_score?: number | null
+          search_term?: string | null
+          sentiment?: string | null
+          source?: string
+          text?: string
+          theme?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
       kb_sources: {
         Row: {
           created_at: string

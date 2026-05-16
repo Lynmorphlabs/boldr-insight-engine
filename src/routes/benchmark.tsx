@@ -1,8 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { themes, externalSources, type Verdict } from "@/data";
-import { Globe, Quote, AlertOctagon, Compass } from "lucide-react";
+import { Globe, Quote, AlertOctagon, Compass, RefreshCw, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { syncExternalSentiment, getExternalQuotes } from "@/lib/sentiment.functions";
+import { THEMES, INTERNAL_TO_EXTERNAL, type ThemeName } from "@/lib/sentiment-themes";
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -11,9 +17,7 @@ export const Route = createFileRoute("/benchmark")({
   head: () => ({
     meta: [
       { title: "External Sentiment · Boldr CI Engine" },
-      { name: "description", content: "Bonus: 3 external sources cross-validate 5 themes. Per-theme verdict — Boldr-Specific Gap vs Market-Wide Opportunity — with recommended action." },
-      { property: "og:title", content: "External Sentiment Benchmarking · Boldr" },
-      { property: "og:description", content: "Internal tickets vs external mentions with verdict badges." },
+      { name: "description", content: "Cached external sentiment sync across Reddit, WatchUSeek, Trustpilot — per-theme signal match vs internal tickets." },
     ],
   }),
   component: BenchmarkPage,
@@ -25,7 +29,89 @@ function verdictTone(v: Verdict) {
     : "bg-success text-success-foreground";
 }
 
+type SignalMatch = "Boldr-Specific Gap" | "Market-Wide Concern" | "Emerging Opportunity";
+
+function classifySignal(internal: number, external: number): { match: SignalMatch; action: string } {
+  if (external >= 3 && external >= internal * 2.5 && internal <= 4) {
+    return { match: "Market-Wide Concern", action: "Lead with content + paid search — demand exists market-wide; capture it before competitors." };
+  }
+  if (internal > 0 && external < Math.max(2, internal * 0.5)) {
+    return { match: "Boldr-Specific Gap", action: "Fix the PDP / KB — customers ask Boldr about this but the wider market is silent. It's a Boldr clarity gap." };
+  }
+  if (external >= 2 && internal <= 2) {
+    return { match: "Emerging Opportunity", action: "Pilot a small campaign — external chatter is rising before internal tickets. First-mover window." };
+  }
+  return { match: "Market-Wide Concern", action: "Monitor both signals; align messaging across PDP and social." };
+}
+
+function signalTone(m: SignalMatch) {
+  if (m === "Boldr-Specific Gap") return "bg-ember text-ember-foreground";
+  if (m === "Market-Wide Concern") return "bg-chart-4/20 text-chart-4 border border-chart-4/40";
+  return "bg-success text-success-foreground";
+}
+
 function BenchmarkPage() {
+  const queryClient = useQueryClient();
+  const getQuotes = useServerFn(getExternalQuotes);
+  const syncFn = useServerFn(syncExternalSentiment);
+
+  const { data: quotesData } = useQuery({
+    queryKey: ["external-quotes"],
+    queryFn: () => getQuotes(),
+    staleTime: 60_000,
+  });
+  const quotes = quotesData?.quotes ?? [];
+
+  const syncMut = useMutation({
+    mutationFn: () => syncFn(),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["external-quotes"] });
+      if (res.fallback) {
+        toast.warning("Live sources unavailable — loaded seeded demo data.", {
+          description: res.errors?.join(" · "),
+        });
+      } else {
+        toast.success(`Sync complete — ${res.inserted} new quotes classified.`, {
+          description: res.errors?.length ? `Partial: ${res.errors.join(" · ")}` : undefined,
+        });
+      }
+    },
+    onError: (e) => toast.error("Sync failed", { description: (e as Error).message }),
+  });
+
+  // External counts per theme bucket
+  const externalCounts = useMemo(() => {
+    const counts = new Map<ThemeName, number>();
+    for (const t of THEMES) counts.set(t, 0);
+    for (const q of quotes) {
+      if (q.theme && counts.has(q.theme as ThemeName)) {
+        counts.set(q.theme as ThemeName, (counts.get(q.theme as ThemeName) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [quotes]);
+
+  // Aggregate internal counts per external-theme bucket
+  const internalCounts = useMemo(() => {
+    const counts = new Map<ThemeName, number>();
+    for (const t of THEMES) counts.set(t, 0);
+    for (const theme of themes) {
+      const bucket = INTERNAL_TO_EXTERNAL[theme.name];
+      if (bucket) counts.set(bucket, (counts.get(bucket) ?? 0) + theme.internalCount);
+    }
+    // tickets we don't have internal data for stay at 0
+    return counts;
+  }, []);
+
+  const signalRows = useMemo(() => {
+    return THEMES.map((t) => {
+      const internal = internalCounts.get(t) ?? 0;
+      const external = externalCounts.get(t) ?? 0;
+      const sig = classifySignal(internal, external);
+      return { theme: t, internal, external, ...sig };
+    });
+  }, [internalCounts, externalCounts]);
+
   const chartData = themes.map((t) => ({
     name: t.name,
     Internal: t.internalCount,
@@ -34,15 +120,67 @@ function BenchmarkPage() {
   const [hovered, setHovered] = useState<"Internal" | "External" | null>(null);
   const opacityFor = (key: "Internal" | "External") => (hovered && hovered !== key ? 0.22 : 1);
 
+  const lastSync = quotes[0]?.fetched_at ? new Date(quotes[0].fetched_at) : null;
+
   return (
     <div className="px-5 md:px-8 py-7 boldr-stagger max-w-[1280px]">
-      <header>
-        <p className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground">Bonus · external sentiment benchmarking</p>
-        <h2 className="font-display text-[28px] tracking-tight mt-1">Internal signal vs the open market</h2>
-        <p className="text-[13.5px] text-muted-foreground mt-1 max-w-2xl">
-          5 themes from this month's ticket flow, cross-validated against 3 external sources. Each theme carries a per-theme verdict and a recommended action.
-        </p>
+      <header className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground">Bonus · external sentiment benchmarking</p>
+          <h2 className="font-display text-[28px] tracking-tight mt-1">Internal signal vs the open market</h2>
+          <p className="text-[13.5px] text-muted-foreground mt-1 max-w-2xl">
+            Cached sync from Reddit, WatchUSeek, and Trustpilot. Each theme carries a per-theme signal match and recommended action.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            size="sm"
+            onClick={() => syncMut.mutate()}
+            disabled={syncMut.isPending}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", syncMut.isPending && "animate-spin")} />
+            {syncMut.isPending ? "Syncing…" : "Sync External Sentiment"}
+          </Button>
+          <span className="text-[10.5px] text-muted-foreground">
+            {lastSync ? `Last sync · ${lastSync.toLocaleString()}` : "Not synced yet"} · {quotes.length} cached quotes
+          </span>
+        </div>
       </header>
+
+      {/* External Signal Benchmark */}
+      <section className="mt-7 rounded-md hairline bg-card p-5">
+        <div className="flex items-baseline justify-between gap-2 flex-wrap mb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-ember" />
+            <h3 className="font-display text-[18px] tracking-tight">External Signal Benchmark</h3>
+          </div>
+          <span className="text-[11px] text-muted-foreground">{THEMES.length} themes · internal vs external · auto-classified</span>
+        </div>
+        <div className="space-y-2">
+          {signalRows.map((row) => (
+            <div
+              key={row.theme}
+              className="grid grid-cols-1 md:grid-cols-[1.4fr_auto_auto_auto_1.6fr] gap-3 md:gap-4 items-center rounded-md hairline bg-surface-2/30 px-4 py-3"
+            >
+              <div className="font-display text-[14.5px] tracking-tight">{row.theme}</div>
+              <div className="text-[11.5px] text-muted-foreground">
+                Internal · <span className="text-foreground font-medium tabular-nums">{row.internal}</span>
+              </div>
+              <div className="text-[11.5px] text-muted-foreground">
+                External · <span className="text-foreground font-medium tabular-nums">{row.external}</span>
+              </div>
+              <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium tracking-tight justify-self-start", signalTone(row.match))}>
+                {row.match === "Boldr-Specific Gap" ? <AlertOctagon className="h-3 w-3" />
+                  : row.match === "Emerging Opportunity" ? <TrendingUp className="h-3 w-3" />
+                  : <Compass className="h-3 w-3" />}
+                {row.match}
+              </span>
+              <p className="text-[12px] text-foreground/80 leading-relaxed">{row.action}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Sources */}
       <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -53,9 +191,6 @@ function BenchmarkPage() {
             </div>
             <h3 className="mt-1 text-[14px] font-display tracking-tight leading-snug">{s.name}</h3>
             <p className="mt-2 text-[12px] text-muted-foreground leading-relaxed">{s.justification}</p>
-            <div className="mt-3 pt-3 border-t border-border text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
-              {s.quotes.length} attributed mentions
-            </div>
           </article>
         ))}
       </section>
@@ -87,13 +222,7 @@ function BenchmarkPage() {
                         : "text-muted-foreground hover:bg-surface-2/50",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-sm transition-transform",
-                      key === "Internal" ? "bg-chart-4" : "bg-ember",
-                      isActive && "scale-125 shadow-[0_0_0_3px_oklch(0.72_0.19_45_/_0.25)]",
-                    )}
-                  />
+                  <span className={cn("h-2 w-2 rounded-sm", key === "Internal" ? "bg-chart-4" : "bg-ember")} />
                   {key}
                 </button>
               );
@@ -108,9 +237,7 @@ function BenchmarkPage() {
               <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
               <Tooltip
                 cursor={{ fill: "var(--ember-soft)", opacity: 0.22 }}
-                contentStyle={{ background: "var(--card)", border: "1px solid var(--border-strong)", borderRadius: 10, fontSize: 12, boxShadow: "var(--shadow-soft)" }}
-                labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
-                itemStyle={{ color: "var(--muted-foreground)" }}
+                contentStyle={{ background: "var(--card)", border: "1px solid var(--border-strong)", borderRadius: 10, fontSize: 12 }}
               />
               <Bar dataKey="Internal" fill="var(--chart-4)" fillOpacity={opacityFor("Internal")} radius={[3, 3, 0, 0]} barSize={22} isAnimationActive={false} />
               <Bar dataKey="External" fill="var(--ember)" fillOpacity={opacityFor("External")} radius={[3, 3, 0, 0]} barSize={22} isAnimationActive={false} />
@@ -119,10 +246,10 @@ function BenchmarkPage() {
         </div>
       </section>
 
-      {/* Per-theme verdict cards */}
+      {/* Per-theme verdict cards (existing) */}
       <section className="mt-7">
         <div className="flex items-baseline justify-between mb-3">
-          <h3 className="font-display text-[18px] tracking-tight">Per-theme verdict</h3>
+          <h3 className="font-display text-[18px] tracking-tight">Per-theme verdict (internal taxonomy)</h3>
           <span className="text-[11px] text-muted-foreground">5 themes · 2 verdict classes</span>
         </div>
         <div className="space-y-3">
@@ -157,26 +284,31 @@ function BenchmarkPage() {
         </div>
       </section>
 
-      {/* Quotes */}
+      {/* Live quotes */}
       <section className="mt-8">
         <div className="flex items-baseline justify-between mb-3">
-          <h3 className="font-display text-[18px] tracking-tight">Attributed external quotes</h3>
-          <span className="text-[11px] text-muted-foreground">curated · seeded for demo</span>
+          <h3 className="font-display text-[18px] tracking-tight">External quotes (cached)</h3>
+          <span className="text-[11px] text-muted-foreground">{quotes.length} quotes · sync to refresh</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {externalSources.flatMap((s) => s.quotes.map((q) => ({ src: s, q }))).map(({ src, q }, i) => (
-            <article key={i} className="rounded-md hairline bg-card p-4">
-              <Quote className="h-3.5 w-3.5 text-primary" />
-              <p className="mt-2 text-[12.5px] text-foreground/90 leading-relaxed">"{q.text}"</p>
-              <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground flex items-center justify-between gap-2">
-                <span><span className="text-foreground font-medium">{q.author}</span> · {q.source}</span>
-                <span>{q.theme}</span>
-              </div>
-            </article>
-          ))}
-        </div>
+        {quotes.length === 0 ? (
+          <div className="rounded-md hairline bg-card p-6 text-center text-[13px] text-muted-foreground">
+            No quotes cached yet. Click <span className="text-foreground font-medium">Sync External Sentiment</span> to fetch.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {quotes.slice(0, 24).map((q) => (
+              <article key={q.id} className="rounded-md hairline bg-card p-4">
+                <Quote className="h-3.5 w-3.5 text-primary" />
+                <p className="mt-2 text-[12.5px] text-foreground/90 leading-relaxed">"{q.text}"</p>
+                <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground flex items-center justify-between gap-2">
+                  <span><span className="text-foreground font-medium">{q.author}</span> · {q.source}</span>
+                  <span className="text-right truncate max-w-[50%]">{q.theme}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
-
