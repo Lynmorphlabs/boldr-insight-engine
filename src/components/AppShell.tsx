@@ -24,6 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <CopilotProvider>
       <AppShellInner>{children}</AppShellInner>
       <CopilotDrawer />
+      <CitationDrawer />
     </CopilotProvider>
   );
 }
