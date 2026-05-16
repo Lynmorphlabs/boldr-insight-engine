@@ -120,6 +120,11 @@ function BenchmarkPage() {
   }));
   const [hovered, setHovered] = useState<"Internal" | "External" | null>(null);
   const opacityFor = (key: "Internal" | "External") => (hovered && hovered !== key ? 0.22 : 1);
+  const [openTheme, setOpenTheme] = useState<ThemeName | null>(null);
+  const themeQuotes = useMemo(
+    () => (openTheme ? quotes.filter((q) => q.theme === openTheme) : []),
+    [openTheme, quotes],
+  );
 
   const lastSync = quotes[0]?.fetched_at ? new Date(quotes[0].fetched_at) : null;
 
