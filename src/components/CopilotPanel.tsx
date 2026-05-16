@@ -5,7 +5,7 @@ import { useCopilot } from "./copilot-context";
 import { useState } from "react";
 
 export function CopilotPanel() {
-  const { turns, ask, reset } = useCopilot();
+  const { turns, ask, reset, openCitation } = useCopilot();
   const [query, setQuery] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
