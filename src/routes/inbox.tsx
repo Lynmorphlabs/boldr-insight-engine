@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   tickets,
   kbEntries,
@@ -22,8 +23,16 @@ import {
   X,
   PlusCircle,
   Inbox as InboxIcon,
+  BookPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// "Routed to" only makes sense when it points OUTSIDE the CS desk
+// (e.g. service centre, Shopify ops, B2B). The user of this app IS cs@boldr.co.
+const INTERNAL_CS_ROUTES = new Set(["cs@boldr.co", "CS", "cs"]);
+function isExternalRoute(routedTo?: string) {
+  return !!routedTo && !INTERNAL_CS_ROUTES.has(routedTo);
+}
 
 export const Route = createFileRoute("/inbox")({
   head: () => ({
