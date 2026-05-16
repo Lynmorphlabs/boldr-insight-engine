@@ -3,13 +3,13 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { themes, externalSources, type Verdict } from "@/data";
-import { Globe, Quote, AlertOctagon, Compass, RefreshCw, Sparkles, TrendingUp } from "lucide-react";
+import { Globe, Quote, AlertOctagon, Compass, RefreshCw, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { syncExternalSentiment, getExternalQuotes } from "@/lib/sentiment.functions";
-import { THEMES, INTERNAL_TO_EXTERNAL, type ThemeName } from "@/lib/sentiment-themes";
+import { INTERNAL_TO_EXTERNAL } from "@/lib/sentiment-themes";
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -30,25 +30,10 @@ function verdictTone(v: Verdict) {
     : "bg-success text-success-foreground";
 }
 
-type SignalMatch = "Boldr-Specific Gap" | "Market-Wide Concern" | "Emerging Opportunity";
-
-function classifySignal(internal: number, external: number): { match: SignalMatch; action: string } {
-  if (external >= 3 && external >= internal * 2.5 && internal <= 4) {
-    return { match: "Market-Wide Concern", action: "Lead with content + paid search — demand exists market-wide; capture it before competitors." };
-  }
-  if (internal > 0 && external < Math.max(2, internal * 0.5)) {
-    return { match: "Boldr-Specific Gap", action: "Fix the PDP / KB — customers ask Boldr about this but the wider market is silent. It's a Boldr clarity gap." };
-  }
-  if (external >= 2 && internal <= 2) {
-    return { match: "Emerging Opportunity", action: "Pilot a small campaign — external chatter is rising before internal tickets. First-mover window." };
-  }
-  return { match: "Market-Wide Concern", action: "Monitor both signals; align messaging across PDP and social." };
-}
-
-function signalTone(m: SignalMatch) {
-  if (m === "Boldr-Specific Gap") return "bg-ember text-ember-foreground";
-  if (m === "Market-Wide Concern") return "bg-chart-4/20 text-chart-4 border border-chart-4/40";
-  return "bg-success text-success-foreground";
+function verdictAction(v: Verdict): string {
+  return v === "Boldr-Specific Gap"
+    ? "Fix the PDP / KB — Boldr has the answer internally but it is missing where customers look."
+    : "Lead with content + paid search — demand exists market-wide; capture it before competitors do.";
 }
 
 function BenchmarkPage() {
@@ -91,38 +76,19 @@ function BenchmarkPage() {
     }
   }, [quotesLoading, quotes.length, syncMut]);
 
-  // External counts per theme bucket
-  const externalCounts = useMemo(() => {
-    const counts = new Map<ThemeName, number>();
-    for (const t of THEMES) counts.set(t, 0);
-    for (const q of quotes) {
-      if (q.theme && counts.has(q.theme as ThemeName)) {
-        counts.set(q.theme as ThemeName, (counts.get(q.theme as ThemeName) ?? 0) + 1);
-      }
-    }
-    return counts;
-  }, [quotes]);
-
-  // Aggregate internal counts per external-theme bucket
-  const internalCounts = useMemo(() => {
-    const counts = new Map<ThemeName, number>();
-    for (const t of THEMES) counts.set(t, 0);
-    for (const theme of themes) {
-      const bucket = INTERNAL_TO_EXTERNAL[theme.name];
-      if (bucket) counts.set(bucket, (counts.get(bucket) ?? 0) + theme.internalCount);
-    }
-    // tickets we don't have internal data for stay at 0
-    return counts;
-  }, []);
-
-  const signalRows = useMemo(() => {
-    return THEMES.map((t) => {
-      const internal = internalCounts.get(t) ?? 0;
-      const external = externalCounts.get(t) ?? 0;
-      const sig = classifySignal(internal, external);
-      return { theme: t, internal, external, ...sig };
-    });
-  }, [internalCounts, externalCounts]);
+  // Single source of truth: `themes` drives the benchmark table, the chart,
+  // and the per-theme verdict cards. Live `quotes` only feed the drill-down.
+  const signalRows = useMemo(
+    () =>
+      themes.map((t) => ({
+        name: t.name,
+        internal: t.internalCount,
+        external: t.externalVolume,
+        verdict: t.verdict,
+        action: t.recommendedAction || verdictAction(t.verdict),
+      })),
+    [],
+  );
 
   const chartData = themes.map((t) => ({
     name: t.name,
@@ -131,11 +97,12 @@ function BenchmarkPage() {
   }));
   const [hovered, setHovered] = useState<"Internal" | "External" | null>(null);
   const opacityFor = (key: "Internal" | "External") => (hovered && hovered !== key ? 0.22 : 1);
-  const [openTheme, setOpenTheme] = useState<ThemeName | null>(null);
-  const themeQuotes = useMemo(
-    () => (openTheme ? quotes.filter((q) => q.theme === openTheme) : []),
-    [openTheme, quotes],
-  );
+  const [openTheme, setOpenTheme] = useState<string | null>(null);
+  const themeQuotes = useMemo(() => {
+    if (!openTheme) return [];
+    const bucket = INTERNAL_TO_EXTERNAL[openTheme];
+    return bucket ? quotes.filter((q) => q.theme === bucket) : [];
+  }, [openTheme, quotes]);
 
   const lastSync = quotes[0]?.fetched_at ? new Date(quotes[0].fetched_at) : null;
 
@@ -172,28 +139,26 @@ function BenchmarkPage() {
             <Sparkles className="h-4 w-4 text-ember" />
             <h3 className="font-display text-[18px] tracking-tight">External Signal Benchmark</h3>
           </div>
-          <span className="text-[11px] text-muted-foreground">{THEMES.length} themes · internal vs external · auto-classified</span>
+          <span className="text-[11px] text-muted-foreground">{signalRows.length} themes · internal vs external · auto-classified</span>
         </div>
         <div className="space-y-2">
           {signalRows.map((row) => (
             <button
-              key={row.theme}
+              key={row.name}
               type="button"
-              onClick={() => setOpenTheme(row.theme)}
+              onClick={() => setOpenTheme(row.name)}
               className="w-full text-left grid grid-cols-1 md:grid-cols-[1.4fr_auto_auto_auto_1.6fr] gap-3 md:gap-4 items-center rounded-md hairline bg-surface-2/30 px-4 py-3 hover:bg-surface-2/60 hover:hairline-strong transition-colors cursor-pointer"
             >
-              <div className="font-display text-[14.5px] tracking-tight">{row.theme}</div>
+              <div className="font-display text-[14.5px] tracking-tight">{row.name}</div>
               <div className="text-[11.5px] text-muted-foreground">
                 Internal · <span className="text-foreground font-medium tabular-nums">{row.internal}</span>
               </div>
               <div className="text-[11.5px] text-muted-foreground">
                 External · <span className="text-foreground font-medium tabular-nums">{row.external}</span>
               </div>
-              <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium tracking-tight justify-self-start", signalTone(row.match))}>
-                {row.match === "Boldr-Specific Gap" ? <AlertOctagon className="h-3 w-3" />
-                  : row.match === "Emerging Opportunity" ? <TrendingUp className="h-3 w-3" />
-                  : <Compass className="h-3 w-3" />}
-                {row.match}
+              <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium tracking-tight justify-self-start", verdictTone(row.verdict))}>
+                {row.verdict === "Boldr-Specific Gap" ? <AlertOctagon className="h-3 w-3" /> : <Compass className="h-3 w-3" />}
+                {row.verdict}
               </span>
               <p className="text-[12px] text-foreground/80 leading-relaxed">{row.action}</p>
             </button>
