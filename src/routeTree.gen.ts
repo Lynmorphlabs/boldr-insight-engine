@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
+import { Route as IntelligenceRouteImport } from './routes/intelligence'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as IndexRouteImport } from './routes/index'
 
 const KnowledgeRoute = KnowledgeRouteImport.update({
   id: '/knowledge',
   path: '/knowledge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntelligenceRoute = IntelligenceRouteImport.update({
+  id: '/intelligence',
+  path: '/intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/inbox': typeof InboxRoute
+  '/intelligence': typeof IntelligenceRoute
   '/knowledge': typeof KnowledgeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/inbox': typeof InboxRoute
+  '/intelligence': typeof IntelligenceRoute
   '/knowledge': typeof KnowledgeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/inbox': typeof InboxRoute
+  '/intelligence': typeof IntelligenceRoute
   '/knowledge': typeof KnowledgeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inbox' | '/knowledge'
+  fullPaths: '/' | '/inbox' | '/intelligence' | '/knowledge'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inbox' | '/knowledge'
-  id: '__root__' | '/' | '/inbox' | '/knowledge'
+  to: '/' | '/inbox' | '/intelligence' | '/knowledge'
+  id: '__root__' | '/' | '/inbox' | '/intelligence' | '/knowledge'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InboxRoute: typeof InboxRoute
+  IntelligenceRoute: typeof IntelligenceRoute
   KnowledgeRoute: typeof KnowledgeRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge'
       fullPath: '/knowledge'
       preLoaderRoute: typeof KnowledgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/intelligence': {
+      id: '/intelligence'
+      path: '/intelligence'
+      fullPath: '/intelligence'
+      preLoaderRoute: typeof IntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InboxRoute: InboxRoute,
+  IntelligenceRoute: IntelligenceRoute,
   KnowledgeRoute: KnowledgeRoute,
 }
 export const routeTree = rootRouteImport
