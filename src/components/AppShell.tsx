@@ -1,15 +1,13 @@
-import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { type ReactNode } from "react";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Inbox,
   BookOpen,
   Sparkles,
   Telescope,
-  Command,
   Watch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { InsightsCopilot } from "./InsightsCopilot";
 
 const NAV = [
   { to: "/inbox", label: "Email Ops", icon: Inbox, hint: "Triage · draft · send" },
