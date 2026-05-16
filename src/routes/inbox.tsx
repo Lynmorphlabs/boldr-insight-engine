@@ -386,7 +386,8 @@ function KbGapForm({ ticket }: { ticket: Ticket }) {
   const [category, setCategory] = useState(prefill?.category ?? laneLabel(ticket.lane));
   const [question, setQuestion] = useState(prefill?.question ?? ticket.intent);
   const [answer, setAnswer] = useState("");
-  const [source, setSource] = useState<SourceOfTruth | null>(null);
+  const [source, setSource] = useState<SourceOfTruth>("self");
+  const [replyOverride, setReplyOverride] = useState<string | null>(null);
   const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
 
   if (saved) {
