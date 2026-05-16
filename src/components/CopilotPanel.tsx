@@ -102,14 +102,22 @@ export function CopilotPanel() {
                           <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-1.5">Citations · {turn.answer.citations.length}</div>
                           <div className="space-y-2">
                             {turn.answer.citations.map((c) => (
-                              <div key={c.id} className="rounded-xl hairline bg-surface-2/30 p-2.5">
-                                <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-                                  {c.type === "ticket" ? <FileText className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
-                                  <span className="uppercase tracking-[0.14em]">{c.type === "ticket" ? "Internal ticket" : "External source"}</span>
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => openCitation(c)}
+                                className="w-full text-left rounded-xl hairline bg-surface-2/30 p-2.5 hover:bg-surface-2/70 hover:hairline-strong transition group"
+                              >
+                                <div className="flex items-center justify-between gap-2 text-[10.5px] text-muted-foreground">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {c.type === "ticket" ? <FileText className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                                    <span className="uppercase tracking-[0.14em]">{c.type === "ticket" ? "Internal ticket" : "External source"}</span>
+                                  </span>
+                                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition text-primary" />
                                 </div>
                                 <div className="mt-0.5 text-[12px] font-medium">{c.label}</div>
                                 {c.quote && <p className="mt-1 text-[11.5px] text-muted-foreground italic line-clamp-2">"{c.quote}"</p>}
-                              </div>
+                              </button>
                             ))}
                           </div>
                         </div>
