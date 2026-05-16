@@ -183,6 +183,31 @@ function InboxPage() {
   const [selectedId, setSelectedId] = useState(tickets[0]?.id ?? "");
   const selected = visibleTickets.find((t) => t.id === selectedId) ?? filtered[0] ?? visibleTickets[0];
 
+  // Notify backend whenever a ticket is opened in the detail pane.
+  useEffect(() => {
+    if (!selected) return;
+    Webhooks.ticketDetailsRequested({
+      ticketId: selected.id,
+      lane: selected.lane,
+      persona: selected.persona,
+      status: selected.status,
+      isKnowledgeGap: selected.isKnowledgeGap,
+    });
+    if (selected.isKnowledgeGap) {
+      Webhooks.ticketKnowledgeGapDetected({
+        ticketId: selected.id,
+        intent: selected.intent,
+        lane: selected.lane,
+      });
+    }
+    Webhooks.ticketPersonaDetected({
+      ticketId: selected.id,
+      persona: selected.persona,
+      confidence: selected.classifyConfidence,
+    });
+  }, [selected?.id]);
+
+
   function updateMockTicketState(ticketId: string, patch: PersistedTicketState) {
     setMockTicketState((current) => {
       const next = {
