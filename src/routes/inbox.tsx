@@ -140,8 +140,10 @@ function InboxPage() {
               key={t.id}
               onClick={() => setSelectedId(t.id)}
               className={cn(
-                "w-full text-left px-4 py-3 border-b border-border/70 transition-colors",
-                t.id === selected.id ? "bg-card" : "hover:bg-card/60",
+                "relative w-full text-left px-4 py-3 border-b border-border/70 transition-colors",
+                t.id === selected.id
+                  ? "bg-ember/10 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-ember"
+                  : "hover:bg-card/60",
               )}
             >
               <div className="flex items-center justify-between gap-2">
