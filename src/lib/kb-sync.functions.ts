@@ -3,9 +3,11 @@ import { syncAllSources, syncSource } from './kb-sync.server';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
 import { z } from 'zod';
 
+type SyncOutcome = { ok: boolean; added?: number; removed?: number; total?: number; error?: string };
+
 export const triggerKbSyncAll = createServerFn({ method: 'POST' }).handler(async () => {
   const results = await syncAllSources();
-  return JSON.parse(JSON.stringify(results)) as Record<string, unknown>;
+  return results as Record<string, SyncOutcome>;
 });
 
 export const triggerKbSyncOne = createServerFn({ method: 'POST' })
