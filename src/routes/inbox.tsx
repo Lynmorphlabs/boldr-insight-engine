@@ -162,11 +162,6 @@ function InboxPage() {
               <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                 <Chip>{laneLabel(t.lane)}</Chip>
                 <PersonaChip persona={t.persona} />
-                {t.isGap && (
-                  <span className="inline-flex items-center gap-1 rounded bg-destructive-soft px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-foreground">
-                    <FileWarning className="h-2.5 w-2.5" /> KB gap
-                  </span>
-                )}
               </div>
             </button>
           ))}
@@ -252,11 +247,6 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
         <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]", statusTone(ticket.status))}>
           {ticket.status.replace("_", " ")}
         </span>
-        {ticket.escalation && (
-          <span className="inline-flex items-center gap-1 rounded bg-destructive-soft px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]">
-            <AlertTriangle className="h-2.5 w-2.5" /> Escalation
-          </span>
-        )}
       </div>
     </div>
   );
