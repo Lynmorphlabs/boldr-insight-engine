@@ -76,7 +76,12 @@ function IntelligencePage() {
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="persona" type="category" width={150} tick={{ fontSize: 11, fill: "var(--foreground)" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                <Tooltip
+                  cursor={{ fill: "var(--ember-soft)", opacity: 0.22 }}
+                  contentStyle={{ background: "var(--card)", border: "1px solid var(--border-strong)", borderRadius: 10, fontSize: 12, boxShadow: "var(--shadow-soft)" }}
+                  labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
+                  itemStyle={{ color: "var(--ember)" }}
+                />
                 <Bar dataKey="count" fill="var(--ember)" radius={[0, 4, 4, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
