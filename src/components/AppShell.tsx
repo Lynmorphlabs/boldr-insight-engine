@@ -98,9 +98,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/70 backdrop-blur-xl px-5 md:px-8 h-16">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="chip hidden sm:inline-flex">
-              <Sparkles className="h-3 w-3 text-primary" /> Boldr CI
-            </span>
             <h1 className="font-display text-[20px] truncate gradient-text">{current.label}</h1>
           </div>
           {pathname.startsWith("/benchmark") && (
