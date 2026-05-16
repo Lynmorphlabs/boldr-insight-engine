@@ -1,70 +1,77 @@
 ## Problem
 
-The current knowledge gap panel says "Not in KB — routed to CS staff" and shows a `Routed to: cs@boldr.co` row. But the person reading this screen *is* CS staff. Routing CS → CS is a dead end, and the "Auto-drafted KB entry" below it implies the AI already wrote the answer — which contradicts the whole point of a knowledge gap (the AI does not know).
+The right-hand AI panel shows this empty state when a ticket has a KB match but no pre-baked `draftedReply`:
 
-## Proposed change (UI only, frontend)
+> KB match queued — draft will appear after CS staff confirms tone selection.
 
-Reframe the knowledge-gap card so the CS agent on this screen is the one who supplies the answer. The AI's job stops at "I don't know this — here's the structured question." The human's job is to type the canonical answer once, which then becomes the new KB entry.
+Same flavour of weirdness as the "routed to CS staff" copy:
+- The reader **is** CS — there is no separate person to "confirm tone."
+- "Tone selection" is a workflow step that doesn't exist anywhere in the app. It was filler copy to justify why no draft was rendered.
+- In the seed data, ~70 tickets are `answeredByKb: true` but only ~5 carry a hand-written `draftedReply`. The other ~65 hit this message — so the dead-end copy is the *default* experience, not an edge case.
 
-### 1. Replace "Routed to" semantics
+The real reason there's no draft is: the demo data only ships drafts for a few flagship tickets. The UX should not invent a fake "queued for tone" step to cover that gap.
 
-In the AI triage attribute panel:
-- Drop the `Routed to: cs@boldr.co` row when it just points back at CS.
-- Keep `Routed to` only when it points somewhere meaningful and external (e.g. `service@boldr.co` for repairs, `admin.shopify.com` for order ops, `corporate@boldr.co` for B2B). For internal-CS values, hide the row.
+## Proposed change (UI only)
 
-### 2. Rewrite the Knowledge Gap banner
+When `answeredByKb` is true, **always** show a usable drafted reply. If `draftedReply` exists on the ticket, render it as-is. If not, synthesise one client-side from the matched KB entry — that's exactly what the system claims to do anyway ("KB match → drafted reply in Boldr brand voice"). No fake queue, no fake tone step.
 
-Change the copy from "Not in KB — routed to CS staff" to something that owns the action, e.g.:
+### 1. Synthesis rule (deterministic, client-side)
 
-> **Knowledge gap — needs your answer**
-> AI couldn't answer from the KB and didn't guess. Write the canonical answer once; it becomes KB entry and auto-resolves future tickets like this.
-
-### 3. Replace "Auto-drafted KB entry" with "Draft KB entry from CS"
-
-This is the core change. Today the card pretends the AI drafted the answer. Replace it with an editable form the CS agent fills in:
+For tickets with `answeredByKb: true` and no `draftedReply`:
 
 ```text
-DRAFT KB ENTRY (from this ticket)
-Category   [Materials & Safety        ▾]   ← prefilled from ticket.lane
-Question   [Are Boldr movements resistant to magnetic fields?]   ← prefilled from ticket.intent, editable
-Answer     [                                                  ]
-           [  ← empty textarea, CS types the canonical answer  ]
-           [                                                  ]
-Tags       [magnetic, movement, miyota]   ← chips, prefilled from extracted entities
+Hi {firstName},
 
-Source of truth   ( ) My own knowledge   ( ) Confirmed with supplier   ( ) Pending confirmation
-                  ← required radio; "Pending" saves as draft, not live KB
+Thanks for reaching out about Boldr. {kbEntry.answer}
 
-[ Save as KB entry & reply to customer ]   [ Save draft only ]
+Let me know if anything else is unclear.
+
+— Boldr Customer Care
 ```
 
-Behavior (all client-side for v1, no backend writes):
-- Save button is disabled until Answer has content AND a source-of-truth is selected.
-- On save: show a sonner toast "KB-### created · ticket TKT-#### linked", flip the ticket's local state to "resolved", and replace the gap card with a compact "KB-### created from this ticket" confirmation that links to the new entry.
-- "Pending confirmation" saves it as draft (greyed badge, not counted in live KB) and keeps the ticket in `pending_reply`.
+- `firstName` = `ticket.customer.split(" ")[0]`
+- `kbEntry` = top match from `ticket.kbMatches` (highest similarity)
+- If multiple KB matches exist, use only the top one for the body; list the others as "Also referenced: KB-### · KB-###" under the draft.
 
-### 4. Reply composition reuses the answer
+A tiny "Drafted from KB-### · {similarity}%" caption sits above the reply so CS knows where it came from. The existing **Approve & send / Edit / Reject** buttons stay exactly the same — they now work for every KB-answered ticket, not just the 5 hand-authored ones.
 
-Below the KB form, add a small "Reply to customer" preview that auto-wraps the typed answer in Boldr brand voice scaffolding (greeting + the answer + signoff). CS hits **Approve & send**. One keystroke flow: type answer → it becomes both the KB entry and the customer reply.
+### 2. Remove the "queued / tone" copy entirely
 
-### 5. Knowledge gap list view
+Delete this block from `AiPanel`:
 
-On the inbox list, knowledge-gap tickets get a subtle "Needs answer" affordance (small ember dot next to the status badge — does NOT add a second badge, respecting the one-status-badge rule). Clicking the ticket opens straight into the answer form with the textarea focused.
+```tsx
+{!ticket.isGap && !ticket.draftReply && (
+  <div ...>KB match queued — draft will appear after CS staff confirms tone selection.</div>
+)}
+```
+
+Collapse the surrounding branch to a single "always render a draft when KB-answered" card.
+
+### 3. What about the rare "no KB match AND not a gap" case?
+
+If `answeredByKb` is false **and** `isKnowledgeGap` is false (a ticket that's neither — e.g. order-status tickets routed to Shopify), keep a short, honest empty state:
+
+> No KB answer needed — this ticket is handled in {routedTo}.
+
+If `routedTo` is internal/CS, just say "Reply manually below" with an inline textarea + send button (mirrors the gap form, minus the KB save).
+
+### 4. Edit affordance gets real
+
+Today the "Edit" button is decorative. Tiny upgrade: clicking Edit swaps the read-only reply for an editable textarea seeded with the same text. Approve & send still works, now against the edited content. (Client-side only — no persistence.)
 
 ## Why this matters
 
-- Removes the nonsense CS→CS routing.
-- Makes the "knowledge gap → new KB entry" loop a real, demoable action instead of a pre-baked AI fiction.
-- Keeps the "AI never hallucinates" promise visible: the AI surfaces the gap; the human owns the answer.
-- One human action produces both the customer reply and the durable KB entry — that's the compounding leverage story.
+- Kills the second "CS handing off to CS" dead end on the same screen.
+- Makes the KB-match path demoable on **every** answerable ticket, not just the 5 flagship ones.
+- Reinforces the core narrative: AI extracts intent → matches KB → drafts in brand voice → human approves. One uninterrupted loop.
 
-## Out of scope for this change
+## Out of scope
 
-- Persisting KB entries to the database (v1 stays in local state; the form mutates the in-memory `kbEntries` list so the rest of the app sees the new entry for the session).
-- Real assignment/routing engine.
-- Multi-reviewer approval workflow on the KB entry.
+- Real LLM-generated brand-voice rewrite of the KB answer (deterministic template is good enough for v1 and is honest about what the system is doing).
+- Persisting edited drafts.
+- Multiple-language tone variants.
 
 ## Files touched
 
-- `src/routes/inbox.tsx` — gap banner copy, hide internal `routedTo`, replace auto-drafted KB card with editable form + reply preview, list-view "Needs answer" dot.
-- `src/data.ts` — no schema change; the existing `autoDraftKb` (category/question/answer) becomes the prefill for the form instead of a finished entry.
+- `src/routes/inbox.tsx` — synthesise draft from top KB match when `draftedReply` is missing; remove the "queued/tone" empty state; small inline-edit affordance for the Edit button; honest empty state for the rare not-KB / not-gap case.
+- `src/data.ts` — no changes (KB entries already carry the answer text).
