@@ -184,6 +184,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     const key = citationKey(c);
     setCitationTabs((prev) => (prev.some((p) => citationKey(p) === key) ? prev : [...prev, c]));
     setActiveCitationId(key);
+    Webhooks.aiCitationAttached({ type: c.type, id: c.id, label: c.label });
   }, []);
 
   const setActiveCitation = useCallback((id: string) => setActiveCitationId(id), []);
