@@ -14,7 +14,136 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      kb_sources: {
+        Row: {
+          created_at: string
+          drive_file_id: string | null
+          drive_url: string | null
+          entries_count: number
+          id: string
+          kind: string
+          last_error: string | null
+          last_status: string | null
+          last_synced_at: string | null
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          drive_file_id?: string | null
+          drive_url?: string | null
+          entries_count?: number
+          id?: string
+          kind: string
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          drive_file_id?: string | null
+          drive_url?: string | null
+          entries_count?: number
+          id?: string
+          kind?: string
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kb_sync_runs: {
+        Row: {
+          added: number
+          error: string | null
+          finished_at: string | null
+          id: string
+          removed: number
+          source_id: string | null
+          started_at: string
+          status: string
+          total: number
+        }
+        Insert: {
+          added?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          removed?: number
+          source_id?: string | null
+          started_at?: string
+          status: string
+          total?: number
+        }
+        Update: {
+          added?: number
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          removed?: number
+          source_id?: string | null
+          started_at?: string
+          status?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_sync_runs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "kb_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kb_synced_entries: {
+        Row: {
+          answer: string
+          category: string | null
+          external_key: string
+          id: string
+          question: string
+          source_id: string
+          synced_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string | null
+          external_key: string
+          id?: string
+          question: string
+          source_id: string
+          synced_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string | null
+          external_key?: string
+          id?: string
+          question?: string
+          source_id?: string
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kb_synced_entries_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "kb_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
