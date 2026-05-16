@@ -66,7 +66,7 @@ function BenchmarkPage() {
             <p className="text-[11px] text-muted-foreground mt-0.5">Per theme — count of internal tickets against count of external mentions across the 3 sources.</p>
           </div>
           <div className="flex items-center gap-4 text-[11px]">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-chart-2" /> Internal</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-chart-4" /> Internal</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-ember" /> External</span>
           </div>
         </div>
@@ -76,9 +76,14 @@ function BenchmarkPage() {
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Internal" fill="var(--chart-2)" radius={[3, 3, 0, 0]} barSize={22} />
+              <Tooltip
+                cursor={{ fill: "var(--ember-soft)", opacity: 0.22 }}
+                contentStyle={{ background: "var(--card)", border: "1px solid var(--border-strong)", borderRadius: 10, fontSize: 12, boxShadow: "var(--shadow-soft)" }}
+                labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
+                itemStyle={{ color: "var(--muted-foreground)" }}
+              />
+              <Legend wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)" }} iconType="square" />
+              <Bar dataKey="Internal" fill="var(--chart-4)" radius={[3, 3, 0, 0]} barSize={22} />
               <Bar dataKey="External" fill="var(--ember)" radius={[3, 3, 0, 0]} barSize={22} />
             </BarChart>
           </ResponsiveContainer>

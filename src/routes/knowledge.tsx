@@ -99,8 +99,13 @@ function KnowledgePage() {
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={{ stroke: "var(--border)" }} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={36} />
-                    <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-                    <Line type="monotone" dataKey="entries" stroke="var(--ember)" strokeWidth={2.2} dot={{ r: 3, fill: "var(--ember)" }} activeDot={{ r: 5 }} />
+                    <Tooltip
+                      cursor={{ stroke: "var(--ember)", strokeWidth: 1, strokeDasharray: "3 3", opacity: 0.6 }}
+                      contentStyle={{ background: "var(--card)", border: "1px solid var(--border-strong)", borderRadius: 10, fontSize: 12, boxShadow: "var(--shadow-soft)" }}
+                      labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
+                      itemStyle={{ color: "var(--ember)" }}
+                    />
+                    <Line type="monotone" dataKey="entries" stroke="var(--ember)" strokeWidth={2.2} dot={{ r: 3, fill: "var(--ember)", stroke: "var(--card)", strokeWidth: 1 }} activeDot={{ r: 6, fill: "var(--ember)", stroke: "var(--accent)", strokeWidth: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
