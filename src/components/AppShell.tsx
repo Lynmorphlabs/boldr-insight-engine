@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CopilotProvider, useCopilot } from "./copilot-context";
 import { CopilotDrawer } from "./CopilotDrawer";
+import { CitationDrawer } from "./CitationDrawer";
 
 const NAV = [
   { to: "/inbox", label: "Email Ops", icon: Inbox, hint: "Triage · draft · send" },
