@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { themes, externalSources, type Verdict } from "@/data";
 import { Globe, Quote, AlertOctagon, Compass, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCopilot } from "@/components/copilot-context";
 import {
-  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 
 export const Route = createFileRoute("/benchmark")({
