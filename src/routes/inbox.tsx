@@ -295,60 +295,80 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
       {/* extracted */}
       <div className="rounded-md hairline bg-card p-3.5 space-y-2.5">
         <Row label="Intent" value={ticket.intent} />
-        <Row label="Lane" value={laneLabel(ticket.lane)} />
+        <Row
+          label="Lane"
+          valueNode={
+            isShopifyOpsTicket(ticket) ? (
+              <span className="inline-flex items-center gap-1 rounded bg-primary/15 text-primary px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]">
+                <ShoppingBag className="h-2.5 w-2.5" /> Shopify Ops
+              </span>
+            ) : (
+              <span>{laneLabel(ticket.lane)}</span>
+            )
+          }
+        />
         <Row label="Persona" valueNode={<PersonaChip persona={ticket.persona} />} />
         <Row label="Knowledge gap" value={ticket.isKnowledgeGap ? "Yes" : "No"} />
         <Row label="Requires escalation" value={ticket.requiresEscalation ? "Yes" : "No"} />
-        {isExternalRoute(ticket.routedTo) && <Row label="Routed to" value={ticket.routedTo!} />}
+        {!isShopifyOpsTicket(ticket) && isExternalRoute(ticket.routedTo) && (
+          <Row label="Routed to" value={ticket.routedTo!} />
+        )}
       </div>
 
-      {/* KB match OR gap */}
-      {ticket.isKnowledgeGap ? (
-        <div className="rounded-md border border-destructive/40 bg-destructive-soft p-4">
-          <div className="flex items-center gap-2">
-            <FileWarning className="h-4 w-4 text-destructive" />
-            <div className="text-[13px] font-medium">Knowledge gap — needs your answer</div>
-          </div>
-          <p className="mt-2 text-[12.5px] text-foreground/80 leading-relaxed">
-            AI couldn't answer from the KB and <span className="font-medium">did not guess</span>. Write the
-            canonical answer once below — it becomes a KB entry and auto-resolves future tickets like this.
-          </p>
-        </div>
-      ) : ticket.answeredByKb ? (
-        <div className="rounded-md hairline bg-card p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" />
-            <div className="text-[12px] font-medium">KB Match</div>
-          </div>
-          <div className="space-y-1.5">
-            {(ticket.kbMatches ?? []).slice(0, 2).map((m) => {
-              const kb = kbEntries.find((k) => k.id === m.kbId);
-              return (
-                <div key={m.kbId} className="flex items-start justify-between gap-2 text-[12.5px]">
-                  <div>
-                    <div className="font-medium">{kb?.question ?? m.kbId}</div>
-                    <div className="text-[11px] text-muted-foreground">{m.kbId} · {kb?.category}</div>
-                  </div>
-                  <div className="text-[11px] tabular-nums text-ember font-medium">{(m.similarity * 100).toFixed(0)}%</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
+      {/* SHOPIFY OPS LANE — replaces KB match + draft entirely */}
+      {isShopifyOpsTicket(ticket) ? (
+        <ShopifyOpsCard key={ticket.id} ticket={ticket} />
+      ) : (
+        <>
+          {/* KB match OR gap */}
+          {ticket.isKnowledgeGap ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive-soft p-4">
+              <div className="flex items-center gap-2">
+                <FileWarning className="h-4 w-4 text-destructive" />
+                <div className="text-[13px] font-medium">Knowledge gap — needs your answer</div>
+              </div>
+              <p className="mt-2 text-[12.5px] text-foreground/80 leading-relaxed">
+                AI couldn't answer from the KB and <span className="font-medium">did not guess</span>. Write the
+                canonical answer once below — it becomes a KB entry and auto-resolves future tickets like this.
+              </p>
+            </div>
+          ) : ticket.answeredByKb ? (
+            <div className="rounded-md hairline bg-card p-3.5">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                <div className="text-[12px] font-medium">KB Match</div>
+              </div>
+              <div className="space-y-1.5">
+                {(ticket.kbMatches ?? []).slice(0, 2).map((m) => {
+                  const kb = kbEntries.find((k) => k.id === m.kbId);
+                  return (
+                    <div key={m.kbId} className="flex items-start justify-between gap-2 text-[12.5px]">
+                      <div>
+                        <div className="font-medium">{kb?.question ?? m.kbId}</div>
+                        <div className="text-[11px] text-muted-foreground">{m.kbId} · {kb?.category}</div>
+                      </div>
+                      <div className="text-[11px] tabular-nums text-ember font-medium">{(m.similarity * 100).toFixed(0)}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
-      {/* Answerable: draft reply (uses ticket.draftReply when present, else synthesised from top KB match) */}
-      {!ticket.isGap && ticket.answeredByKb && (
-        <DraftReplyCard key={ticket.id} ticket={ticket} />
+          {/* Answerable: draft reply */}
+          {!ticket.isGap && ticket.answeredByKb && (
+            <DraftReplyCard key={ticket.id} ticket={ticket} />
+          )}
+
+          {/* Honest empty state: no KB match AND not a gap */}
+          {!ticket.isGap && !ticket.answeredByKb && (
+            <ManualReplyCard key={ticket.id} ticket={ticket} />
+          )}
+
+          {/* CS-authored KB entry form — the hero moment */}
+          {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
+        </>
       )}
-
-      {/* Honest empty state: no KB match AND not a gap */}
-      {!ticket.isGap && !ticket.answeredByKb && (
-        <ManualReplyCard key={ticket.id} ticket={ticket} />
-      )}
-
-      {/* CS-authored KB entry form — the hero moment */}
-      {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
     </div>
   );
 }
