@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tickets, type Persona } from "@/data";
 import { ArrowDown, ArrowRight, ArrowUp, Download, RefreshCw, Sparkles } from "lucide-react";
@@ -11,7 +10,11 @@ import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { PersonaChip } from "./inbox";
-import { getThemeClusters, getLatestBrief, regenerateBrief } from "@/lib/intelligence.functions";
+import {
+  fetchThemeClusters,
+  fetchLatestBrief,
+  regenerateBriefApi,
+} from "@/lib/workflow-api";
 import { Webhooks } from "@/lib/webhooks";
 
 export const Route = createFileRoute("/intelligence")({
