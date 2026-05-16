@@ -213,19 +213,33 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     seq.current += 1;
     const uid = `u-${seq.current}`;
     const aid = `a-${seq.current}`;
-    setTurns((t) => [
-      ...t,
-      { role: "user", id: uid, text: trimmed },
-      { role: "assistant", id: aid, pending: true },
-    ]);
+    let priorUserPrompt = "";
+    setTurns((t) => {
+      for (let i = t.length - 1; i >= 0; i--) {
+        const turn = t[i];
+        if (turn.role === "user") { priorUserPrompt = turn.text; break; }
+      }
+      return [
+        ...t,
+        { role: "user", id: uid, text: trimmed },
+        { role: "assistant", id: aid, pending: true },
+      ];
+    });
     setTimeout(() => {
-      const answer = matchResponse(trimmed);
+      // First, try to match a curated response for the seeded prompts.
+      // For anything else (i.e. real follow-ups), synthesize a smart-sounding
+      // mock answer grounded in real tickets + external quotes.
+      const curated = exactOrFuzzy(trimmed);
+      const isFollowUp = priorUserPrompt.length > 0;
+      const answer = !isFollowUp && curated
+        ? curated
+        : synthesizeFollowUp(trimmed, priorUserPrompt || trimmed);
       setTurns((t) =>
         t.map((turn) =>
           turn.id === aid ? { role: "assistant", id: aid, pending: false, answer } : turn,
         ),
       );
-    }, 500);
+    }, 600);
   }, []);
 
   const reset = useCallback(() => setTurns([]), []);
