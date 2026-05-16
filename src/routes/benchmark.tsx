@@ -32,6 +32,8 @@ function BenchmarkPage() {
     Internal: t.internalCount,
     External: t.externalVolume,
   }));
+  const [hovered, setHovered] = useState<"Internal" | "External" | null>(null);
+  const opacityFor = (key: "Internal" | "External") => (hovered && hovered !== key ? 0.22 : 1);
 
   return (
     <div className="px-5 md:px-8 py-7 boldr-stagger max-w-[1280px]">
