@@ -165,9 +165,11 @@ function BenchmarkPage() {
         </div>
         <div className="space-y-2">
           {signalRows.map((row) => (
-            <div
+            <button
               key={row.theme}
-              className="grid grid-cols-1 md:grid-cols-[1.4fr_auto_auto_auto_1.6fr] gap-3 md:gap-4 items-center rounded-md hairline bg-surface-2/30 px-4 py-3"
+              type="button"
+              onClick={() => setOpenTheme(row.theme)}
+              className="w-full text-left grid grid-cols-1 md:grid-cols-[1.4fr_auto_auto_auto_1.6fr] gap-3 md:gap-4 items-center rounded-md hairline bg-surface-2/30 px-4 py-3 hover:bg-surface-2/60 hover:hairline-strong transition-colors cursor-pointer"
             >
               <div className="font-display text-[14.5px] tracking-tight">{row.theme}</div>
               <div className="text-[11.5px] text-muted-foreground">
@@ -183,10 +185,66 @@ function BenchmarkPage() {
                 {row.match}
               </span>
               <p className="text-[12px] text-foreground/80 leading-relaxed">{row.action}</p>
-            </div>
+            </button>
           ))}
         </div>
       </section>
+
+      {/* Drill-down panel */}
+      <Sheet open={openTheme !== null} onOpenChange={(o) => !o && setOpenTheme(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="font-display tracking-tight">{openTheme}</SheetTitle>
+            <SheetDescription>
+              {themeQuotes.length} cached quote{themeQuotes.length === 1 ? "" : "s"} behind this signal · sorted by relevance
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-5 space-y-3">
+            {themeQuotes.length === 0 ? (
+              <div className="rounded-md hairline bg-surface-2/40 p-5 text-center text-[12.5px] text-muted-foreground">
+                No cached quotes mapped to this theme yet. Run a sync to populate.
+              </div>
+            ) : (
+              [...themeQuotes]
+                .sort((a, b) => (b.relevance_score ?? 0) - (a.relevance_score ?? 0))
+                .map((q) => (
+                  <article key={q.id} className="rounded-md hairline bg-card p-4">
+                    <div className="flex items-center justify-between gap-2 text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+                      <span className="text-ember">{q.source}</span>
+                      <div className="flex items-center gap-2">
+                        {q.sentiment && (
+                          <span className={cn(
+                            "rounded px-1.5 py-0.5 normal-case tracking-normal text-[10.5px]",
+                            q.sentiment === "negative" ? "bg-ember-soft/40 text-ember"
+                              : q.sentiment === "positive" ? "bg-success/20 text-success"
+                              : "bg-surface-2 text-muted-foreground",
+                          )}>{q.sentiment}</span>
+                        )}
+                        <span className="tabular-nums text-foreground/80 normal-case tracking-normal">
+                          rel · {(q.relevance_score ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[12.5px] text-foreground/90 leading-relaxed">"{q.text}"</p>
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                      <span><span className="text-foreground font-medium">{q.author ?? "anon"}</span>{q.theme && <> · {q.theme}</>}</span>
+                      {q.url && (
+                        <a
+                          href={q.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline truncate max-w-[55%]"
+                        >
+                          {q.url.replace(/^https?:\/\//, "").slice(0, 40)}…
+                        </a>
+                      )}
+                    </div>
+                  </article>
+                ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Sources */}
       <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
