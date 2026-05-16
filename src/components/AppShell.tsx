@@ -35,9 +35,6 @@ function AppShellInner({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-
-  return (
-    <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
       <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-surface/70 backdrop-blur">
         <div className="px-5 pt-6 pb-5 border-b border-border">
