@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { copilotResponses, tickets, externalSources, type CopilotResponse } from "@/data";
+import { Webhooks } from "@/lib/webhooks";
 
 export type Turn =
   | { role: "user"; id: string; text: string }
