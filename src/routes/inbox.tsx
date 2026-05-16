@@ -918,6 +918,18 @@ function ManualReplyCard({ ticket }: { ticket: Ticket }) {
           onClick={() => {
             setSent(true);
             toast.success(`Reply sent to ${ticket.customer}`);
+            Webhooks.ticketReplySent({
+              ticketId: ticket.id,
+              customer: ticket.customer,
+              body,
+              source: "manual",
+            });
+            Webhooks.ticketResolved({ ticketId: ticket.id });
+            Webhooks.ticketStatusChanged({
+              ticketId: ticket.id,
+              from: ticket.status,
+              to: "resolved",
+            });
           }}
           disabled={!body.trim()}
           className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"
