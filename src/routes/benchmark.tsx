@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { themes, externalSources, type Verdict } from "@/data";
 import { Globe, Quote, AlertOctagon, Compass, RefreshCw, Sparkles } from "lucide-react";
@@ -8,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { syncExternalSentiment, getExternalQuotes } from "@/lib/sentiment.functions";
+import { fetchExternalQuotes, syncExternalSentimentApi } from "@/lib/workflow-api";
 import { INTERNAL_TO_EXTERNAL } from "@/lib/sentiment-themes";
 import { Webhooks } from "@/lib/webhooks";
 import {
