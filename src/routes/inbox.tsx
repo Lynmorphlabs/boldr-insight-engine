@@ -162,7 +162,13 @@ function InboxPage() {
                   <span>·</span>
                   <span>{formatDate(t.date)}</span>
                 </div>
-                <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em]", statusTone(t.status))}>
+                <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em]", statusTone(t.status))}>
+                  {t.isKnowledgeGap && (
+                    <span
+                      title="Needs your answer"
+                      className="h-1.5 w-1.5 rounded-full bg-ember inline-block"
+                    />
+                  )}
                   {t.status.replace("_", " ")}
                 </span>
               </div>
