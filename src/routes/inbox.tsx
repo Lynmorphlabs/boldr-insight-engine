@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   tickets,
   kbEntries,
@@ -20,10 +21,18 @@ import {
   MessageSquare,
   Send,
   X,
-  PlusCircle,
+  
   Inbox as InboxIcon,
+  BookPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// "Routed to" only makes sense when it points OUTSIDE the CS desk
+// (e.g. service centre, Shopify ops, B2B). The user of this app IS cs@boldr.co.
+const INTERNAL_CS_ROUTES = new Set(["cs@boldr.co", "CS", "cs"]);
+function isExternalRoute(routedTo?: string) {
+  return !!routedTo && !INTERNAL_CS_ROUTES.has(routedTo);
+}
 
 export const Route = createFileRoute("/inbox")({
   head: () => ({
@@ -153,7 +162,13 @@ function InboxPage() {
                   <span>·</span>
                   <span>{formatDate(t.date)}</span>
                 </div>
-                <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em]", statusTone(t.status))}>
+                <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em]", statusTone(t.status))}>
+                  {t.isKnowledgeGap && (
+                    <span
+                      title="Needs your answer"
+                      className="h-1.5 w-1.5 rounded-full bg-ember inline-block"
+                    />
+                  )}
                   {t.status.replace("_", " ")}
                 </span>
               </div>
@@ -274,7 +289,7 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
         <Row label="Persona" valueNode={<PersonaChip persona={ticket.persona} />} />
         <Row label="Knowledge gap" value={ticket.isKnowledgeGap ? "Yes" : "No"} />
         <Row label="Requires escalation" value={ticket.requiresEscalation ? "Yes" : "No"} />
-        {ticket.routedTo && <Row label="Routed to" value={ticket.routedTo} />}
+        {isExternalRoute(ticket.routedTo) && <Row label="Routed to" value={ticket.routedTo!} />}
       </div>
 
       {/* KB match OR gap */}
@@ -282,10 +297,11 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
         <div className="rounded-md border border-destructive/40 bg-destructive-soft p-4">
           <div className="flex items-center gap-2">
             <FileWarning className="h-4 w-4 text-destructive" />
-            <div className="text-[13px] font-medium">Knowledge Gap</div>
+            <div className="text-[13px] font-medium">Knowledge gap — needs your answer</div>
           </div>
           <p className="mt-2 text-[12.5px] text-foreground/80 leading-relaxed">
-            Not in KB — routed to CS staff. <span className="font-medium">AI did not hallucinate.</span>
+            AI couldn't answer from the KB and <span className="font-medium">did not guess</span>. Write the
+            canonical answer once below — it becomes a KB entry and auto-resolves future tickets like this.
           </p>
         </div>
       ) : ticket.answeredByKb ? (
@@ -340,23 +356,154 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
         </div>
       )}
 
-      {/* Auto-drafted KB — the hero moment */}
-      {ticket.isGap && ticket.autoDraftKb && (
-        <div className="relative rounded-md border-2 border-ember/40 bg-gradient-to-br from-ember-soft to-card p-4 shadow-[0_8px_30px_-12px_oklch(0.62_0.165_45_/_0.35)]">
-          <div className="absolute -top-2.5 left-3 inline-flex items-center gap-1 rounded bg-ember px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-ember-foreground">
-            <PlusCircle className="h-2.5 w-2.5" /> Auto-drafted KB entry
-          </div>
-          <div className="mt-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{ticket.autoDraftKb.category}</div>
-          <h4 className="mt-1 text-[14.5px] font-display tracking-tight">{ticket.autoDraftKb.question}</h4>
-          <p className="mt-2 text-[12.5px] text-foreground/85 leading-relaxed">{ticket.autoDraftKb.answer}</p>
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-[10.5px] text-muted-foreground">Born from {ticket.id} · {formatDate(ticket.date)}</span>
-            <button className="inline-flex items-center gap-1.5 rounded-md bg-ember px-3 py-1.5 text-[12px] text-ember-foreground hover:opacity-90">
-              <Check className="h-3 w-3" /> Approve KB entry
-            </button>
+      {/* CS-authored KB entry form — the hero moment */}
+      {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
+    </div>
+  );
+}
+
+type SourceOfTruth = "self" | "supplier" | "pending";
+
+function KbGapForm({ ticket }: { ticket: Ticket }) {
+  const prefill = ticket.autoDraftKb;
+  const [category, setCategory] = useState(prefill?.category ?? laneLabel(ticket.lane));
+  const [question, setQuestion] = useState(prefill?.question ?? ticket.intent);
+  const [answer, setAnswer] = useState("");
+  const [source, setSource] = useState<SourceOfTruth | null>(null);
+  const [saved, setSaved] = useState<null | { kbId: string; draft: boolean }>(null);
+
+  if (saved) {
+    return (
+      <div className="rounded-md border border-success/40 bg-success-soft/40 p-4">
+        <div className="flex items-center gap-2">
+          <Check className="h-4 w-4 text-success" />
+          <div className="text-[13px] font-medium">
+            {saved.draft ? "KB draft saved" : "KB entry created"} · {saved.kbId}
           </div>
         </div>
+        <p className="mt-1.5 text-[12px] text-foreground/75 leading-relaxed">
+          {saved.draft
+            ? `Saved as draft pending confirmation. ${ticket.id} stays in pending_reply until the entry goes live.`
+            : `Linked to ${ticket.id}. Reply sent to ${ticket.customer}. Future tickets matching this question will auto-resolve.`}
+        </p>
+      </div>
+    );
+  }
+
+  const canSave = answer.trim().length > 0 && source !== null;
+  const reply = answer.trim()
+    ? `Hi ${ticket.customer.split(" ")[0]},\n\nThanks for reaching out about Boldr. ${answer.trim()}\n\nLet me know if anything else is unclear.\n\n— Boldr Customer Care`
+    : "";
+
+  function save(asDraft: boolean) {
+    const kbId = `KB-${String(Math.floor(900 + Math.random() * 99)).padStart(3, "0")}`;
+    setSaved({ kbId, draft: asDraft });
+    toast.success(
+      asDraft
+        ? `${kbId} saved as draft (pending confirmation)`
+        : `${kbId} created · reply sent to ${ticket.customer}`,
+    );
+  }
+
+  return (
+    <div className="relative rounded-md border-2 border-ember/40 bg-gradient-to-br from-ember-soft to-card p-4 shadow-[0_8px_30px_-12px_oklch(0.62_0.165_45_/_0.35)] space-y-3">
+      <div className="absolute -top-2.5 left-3 inline-flex items-center gap-1 rounded bg-ember px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-ember-foreground">
+        <BookPlus className="h-2.5 w-2.5" /> Draft KB entry from CS
+      </div>
+
+      <div className="mt-1 space-y-2.5">
+        <Field label="Category">
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full text-[12.5px] rounded hairline bg-surface px-2 py-1.5 outline-none focus:ring-2 focus:ring-ember/30"
+          />
+        </Field>
+        <Field label="Question">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            className="w-full text-[12.5px] rounded hairline bg-surface px-2 py-1.5 outline-none focus:ring-2 focus:ring-ember/30"
+          />
+        </Field>
+        <Field label="Answer">
+          <textarea
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Write the canonical answer. This becomes the KB entry and the customer reply."
+            rows={5}
+            autoFocus
+            className="w-full text-[12.5px] rounded hairline bg-surface px-2 py-1.5 outline-none focus:ring-2 focus:ring-ember/30 leading-relaxed resize-y"
+          />
+        </Field>
+
+        <div>
+          <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground mb-1.5">
+            Source of truth
+          </div>
+          <div className="flex flex-col gap-1">
+            {([
+              ["self", "My own knowledge"],
+              ["supplier", "Confirmed with supplier"],
+              ["pending", "Pending confirmation (save as draft)"],
+            ] as const).map(([val, label]) => (
+              <label key={val} className="flex items-center gap-2 text-[12px] cursor-pointer">
+                <input
+                  type="radio"
+                  name={`source-${ticket.id}`}
+                  checked={source === val}
+                  onChange={() => setSource(val)}
+                  className="accent-ember"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {reply && (
+        <div className="rounded bg-surface/70 p-3 hairline">
+          <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground mb-1">
+            Reply preview · Boldr brand voice
+          </div>
+          <p className="text-[12.5px] whitespace-pre-wrap leading-relaxed text-foreground/85">
+            {reply}
+          </p>
+        </div>
       )}
+
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-[10.5px] text-muted-foreground">
+          Born from {ticket.id} · {formatDate(ticket.date)}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => save(true)}
+            disabled={!answer.trim()}
+            className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Save draft
+          </button>
+          <button
+            onClick={() => save(source === "pending")}
+            disabled={!canSave}
+            className="inline-flex items-center gap-1.5 rounded-md bg-ember px-3 py-1.5 text-[12px] text-ember-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Check className="h-3 w-3" />
+            {source === "pending" ? "Save as draft" : "Save KB & reply"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground mb-1">{label}</div>
+      {children}
     </div>
   );
 }

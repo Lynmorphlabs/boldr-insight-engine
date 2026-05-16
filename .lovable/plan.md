@@ -1,120 +1,70 @@
-# Plan — Auto-sync Knowledge Base from Google Drive
+## Problem
 
-Turn the KB into a live mirror of source documents in the Boldr team's Google Drive. Edit FAQ in a Google Sheet or update an SOP in a Google Doc → the KB refreshes within ~10 minutes, auto-drafted entries land in the existing pending-approval queue, and provenance points back to the exact file + revision.
+The current knowledge gap panel says "Not in KB — routed to CS staff" and shows a `Routed to: cs@boldr.co` row. But the person reading this screen *is* CS staff. Routing CS → CS is a dead end, and the "Auto-drafted KB entry" below it implies the AI already wrote the answer — which contradicts the whole point of a knowledge gap (the AI does not know).
 
-## What you'll see in the UI
+## Proposed change (UI only, frontend)
 
-- A **Sources rail** that shows, per source: Drive file name, last synced timestamp, revision number, and a colored dot (synced / syncing / error / gap).
-- A **"Sync now"** button on each source card (manual refresh) and a global one in the header.
-- A **Source detail drawer** opened from any rail item — opens the Drive file in a new tab, shows last 5 sync runs, diff summary ("+3 entries, 1 edited, 2 removed since last sync").
-- KB entries gain a small **"From Drive"** chip with the file name; clicking it opens the file at the right heading / row.
-- New Drive content lands in the existing **Auto-drafted · pending approval** queue (no schema change to that flow), with provenance "Born from `FAQ-master.gsheet` row 47".
+Reframe the knowledge-gap card so the CS agent on this screen is the one who supplies the answer. The AI's job stops at "I don't know this — here's the structured question." The human's job is to type the canonical answer once, which then becomes the new KB entry.
 
-## How sync works
+### 1. Replace "Routed to" semantics
+
+In the AI triage attribute panel:
+- Drop the `Routed to: cs@boldr.co` row when it just points back at CS.
+- Keep `Routed to` only when it points somewhere meaningful and external (e.g. `service@boldr.co` for repairs, `admin.shopify.com` for order ops, `corporate@boldr.co` for B2B). For internal-CS values, hide the row.
+
+### 2. Rewrite the Knowledge Gap banner
+
+Change the copy from "Not in KB — routed to CS staff" to something that owns the action, e.g.:
+
+> **Knowledge gap — needs your answer**
+> AI couldn't answer from the KB and didn't guess. Write the canonical answer once; it becomes KB entry and auto-resolves future tickets like this.
+
+### 3. Replace "Auto-drafted KB entry" with "Draft KB entry from CS"
+
+This is the core change. Today the card pretends the AI drafted the answer. Replace it with an editable form the CS agent fills in:
 
 ```text
- Google Drive                    Lovable Cloud (Postgres)              UI
- ┌──────────────────┐            ┌──────────────────────────┐         ┌────────────┐
- │ FAQ.gsheet       │  poll      │ kb_sources               │  read   │ /knowledge │
- │ SOP.gsheet       │ ─────────► │ kb_entries (status, prov)│ ──────► │ rail+cards │
- │ Product-Ref.gdoc │  every     │ kb_sync_runs (logs)      │         │            │
- │ Engraving.gdoc   │  ~10 min   │ kb_pending_changes       │         │            │
- │ Servicing.gdoc   │            └──────────────────────────┘         └────────────┘
- └──────────────────┘
+DRAFT KB ENTRY (from this ticket)
+Category   [Materials & Safety        ▾]   ← prefilled from ticket.lane
+Question   [Are Boldr movements resistant to magnetic fields?]   ← prefilled from ticket.intent, editable
+Answer     [                                                  ]
+           [  ← empty textarea, CS types the canonical answer  ]
+           [                                                  ]
+Tags       [magnetic, movement, miyota]   ← chips, prefilled from extracted entities
+
+Source of truth   ( ) My own knowledge   ( ) Confirmed with supplier   ( ) Pending confirmation
+                  ← required radio; "Pending" saves as draft, not live KB
+
+[ Save as KB entry & reply to customer ]   [ Save draft only ]
 ```
 
-1. A cron job hits `/api/public/sync/drive` every 10 min (with HMAC).
-2. For each row in `kb_sources`, fetch the file's current `revisionId` via Drive API. Skip if unchanged.
-3. If changed: fetch contents through the right connector (Sheets API for `.gsheet`, Docs API for `.gdoc`), parse into KB entries.
-4. Diff against current `kb_entries` for that source:
-   - New rows/headings → insert as `Auto-drafted`
-   - Edited bodies → mark existing entry `Pending approval` with new draft stored alongside
-   - Removed rows → mark `Archived` (kept for history, hidden from the live KB)
-5. Write a `kb_sync_runs` row (counts, duration, error if any).
-6. UI loader reads from Postgres — already-rendered components keep working with no changes to their props shape.
+Behavior (all client-side for v1, no backend writes):
+- Save button is disabled until Answer has content AND a source-of-truth is selected.
+- On save: show a sonner toast "KB-### created · ticket TKT-#### linked", flip the ticket's local state to "resolved", and replace the gap card with a compact "KB-### created from this ticket" confirmation that links to the new entry.
+- "Pending confirmation" saves it as draft (greyed badge, not counted in live KB) and keeps the ticket in `pending_reply`.
 
-## Parsing rules
+### 4. Reply composition reuses the answer
 
-**Google Sheets (FAQ, SOP):** first row = headers. Required columns: `id`, `question`, `answer`, `category`. Optional: `status_override`. Each row = one entry; `id` is the stable key.
+Below the KB form, add a small "Reply to customer" preview that auto-wraps the typed answer in Boldr brand voice scaffolding (greeting + the answer + signoff). CS hits **Approve & send**. One keystroke flow: type answer → it becomes both the KB entry and the customer reply.
 
-**Google Docs (Product Reference, Engraving Rate Card, Servicing Rate Card):** `Heading 2` = question, following paragraphs until the next H2 = answer, optional `Heading 3` immediately under H2 sets `category` (otherwise inherited from previous H3). Each entry's stable key is `slug(question)`.
+### 5. Knowledge gap list view
 
-## Setup steps (one-time, in this order)
+On the inbox list, knowledge-gap tickets get a subtle "Needs answer" affordance (small ember dot next to the status badge — does NOT add a second badge, respecting the one-status-badge rule). Clicking the ticket opens straight into the answer form with the textarea focused.
 
-1. **Enable Lovable Cloud** (for Postgres + secrets + cron).
-2. **Connect Google Sheets** and **Google Drive** and **Google Docs** connectors (App connector, Boldr team account).
-3. Open `/knowledge` → new **"Connect Drive sources"** modal lets an admin pick the 5 files from a Drive file picker (powered by the Drive connector's `files.list`). Selections persist to `kb_sources.drive_file_id`.
-4. First sync runs immediately; subsequent syncs run on the 10-min cron.
+## Why this matters
 
-## Technical section
+- Removes the nonsense CS→CS routing.
+- Makes the "knowledge gap → new KB entry" loop a real, demoable action instead of a pre-baked AI fiction.
+- Keeps the "AI never hallucinates" promise visible: the AI surfaces the gap; the human owns the answer.
+- One human action produces both the customer reply and the durable KB entry — that's the compounding leverage story.
 
-### Database (one migration)
+## Out of scope for this change
 
-```sql
--- existing kb_entries gets new columns
-alter table kb_entries add column drive_source_id uuid references kb_sources(id);
-alter table kb_entries add column drive_row_or_anchor text;  -- "row:47" or "heading:What-grade-of-titanium"
-alter table kb_entries add column drive_revision_id text;
-alter table kb_entries add column draft_answer text;          -- pending edit, shown in approval queue
+- Persisting KB entries to the database (v1 stays in local state; the form mutates the in-memory `kbEntries` list so the rest of the app sees the new entry for the session).
+- Real assignment/routing engine.
+- Multi-reviewer approval workflow on the KB entry.
 
-create table kb_sources (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,                  -- "FAQ", "SOP", etc.
-  kind text not null check (kind in ('sheet','doc')),
-  drive_file_id text not null,
-  drive_file_name text not null,
-  last_synced_at timestamptz,
-  last_revision_id text,
-  last_status text check (last_status in ('ok','error','syncing')),
-  last_error text
-);
+## Files touched
 
-create table kb_sync_runs (
-  id uuid primary key default gen_random_uuid(),
-  source_id uuid references kb_sources(id) on delete cascade,
-  started_at timestamptz not null default now(),
-  finished_at timestamptz,
-  added int default 0, edited int default 0, removed int default 0,
-  status text, error text
-);
-```
-RLS: read-only for `authenticated`; writes only via service role (server functions).
-
-### Server functions (`src/lib/kb-sync.functions.ts`)
-
-- `listKbSources()` — used by the rail.
-- `getSyncRuns(sourceId)` — used by the detail drawer.
-- `triggerSync(sourceId?)` — manual button; admin-gated via `requireSupabaseAuth` + a `has_role('admin', uid)` check.
-- `pickDriveFile(query)` — proxies `GET /drive/v3/files` for the connect-sources modal.
-
-### Server route (`src/routes/api/public/sync/drive.ts`)
-
-POST handler with HMAC-verified secret (`KB_SYNC_SECRET`). Iterates `kb_sources`, calls per-source sync helper, writes `kb_sync_runs`. Returns JSON summary. Cron: `pg_cron` calling `https://project--{id}.lovable.app/api/public/sync/drive` every 10 min.
-
-### Parsers (`src/lib/kb-sync.server.ts`)
-
-- `parseSheet(spreadsheetId, sheetName)` — uses gateway: `GET /google_sheets/v4/spreadsheets/{id}/values/{range}` with range `Sheet1!A:E`. Validates headers with Zod.
-- `parseDoc(documentId)` — uses gateway: `GET /google_docs/v1/documents/{id}`. Walks `body.content`, groups by `HEADING_2`, joins `textRun.content`.
-- `diffEntries(sourceId, parsed)` — returns `{ adds, edits, removes }`; performs the upsert + status transitions in a single transaction.
-
-### Files to change
-
-- New: migration, `kb-sync.functions.ts`, `kb-sync.server.ts`, `api/public/sync/drive.ts`, `src/components/SourceSyncRail.tsx`, `src/components/SourceDetailDrawer.tsx`, `src/components/ConnectSourcesModal.tsx`.
-- Edited: `src/routes/knowledge.tsx` — swap seeded `kbSources`/`kbEntries` for loader data from server functions; mount the new rail components; thread sync status into existing cards.
-- `src/data.ts` — keep types (`KbStatus`, `KbSource`, `KbEntry`) but remove seeded arrays; types now describe DB rows.
-
-### Secrets
-
-- `KB_SYNC_SECRET` (HMAC for the cron webhook) — added via secrets tool.
-- Google connector keys land automatically when you link the connectors.
-
-### What stays the same
-
-- All current `/knowledge` visuals (themes panel, growth chart, pending queue grid, grouped entries list).
-- The approval flow's UX — `Approve` / `Edit` buttons just write back to Postgres (and optionally push the approved edit back into the Sheet, out of scope for this round).
-
-### Out of scope (call out if you want them next)
-
-- Real-time push notifications (Drive `changes.watch`).
-- Two-way sync (approved edits writing back to Drive).
-- Per-user OAuth / multi-tenant KBs.
+- `src/routes/inbox.tsx` — gap banner copy, hide internal `routedTo`, replace auto-drafted KB card with editable form + reply preview, list-view "Needs answer" dot.
+- `src/data.ts` — no schema change; the existing `autoDraftKb` (category/question/answer) becomes the prefill for the form instead of a finished entry.
