@@ -139,28 +139,26 @@ function BenchmarkPage() {
             <Sparkles className="h-4 w-4 text-ember" />
             <h3 className="font-display text-[18px] tracking-tight">External Signal Benchmark</h3>
           </div>
-          <span className="text-[11px] text-muted-foreground">{THEMES.length} themes · internal vs external · auto-classified</span>
+          <span className="text-[11px] text-muted-foreground">{signalRows.length} themes · internal vs external · auto-classified</span>
         </div>
         <div className="space-y-2">
           {signalRows.map((row) => (
             <button
-              key={row.theme}
+              key={row.name}
               type="button"
-              onClick={() => setOpenTheme(row.theme)}
+              onClick={() => setOpenTheme(row.name)}
               className="w-full text-left grid grid-cols-1 md:grid-cols-[1.4fr_auto_auto_auto_1.6fr] gap-3 md:gap-4 items-center rounded-md hairline bg-surface-2/30 px-4 py-3 hover:bg-surface-2/60 hover:hairline-strong transition-colors cursor-pointer"
             >
-              <div className="font-display text-[14.5px] tracking-tight">{row.theme}</div>
+              <div className="font-display text-[14.5px] tracking-tight">{row.name}</div>
               <div className="text-[11.5px] text-muted-foreground">
                 Internal · <span className="text-foreground font-medium tabular-nums">{row.internal}</span>
               </div>
               <div className="text-[11.5px] text-muted-foreground">
                 External · <span className="text-foreground font-medium tabular-nums">{row.external}</span>
               </div>
-              <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium tracking-tight justify-self-start", signalTone(row.match))}>
-                {row.match === "Boldr-Specific Gap" ? <AlertOctagon className="h-3 w-3" />
-                  : row.match === "Emerging Opportunity" ? <TrendingUp className="h-3 w-3" />
-                  : <Compass className="h-3 w-3" />}
-                {row.match}
+              <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium tracking-tight justify-self-start", verdictTone(row.verdict))}>
+                {row.verdict === "Boldr-Specific Gap" ? <AlertOctagon className="h-3 w-3" /> : <Compass className="h-3 w-3" />}
+                {row.verdict}
               </span>
               <p className="text-[12px] text-foreground/80 leading-relaxed">{row.action}</p>
             </button>
