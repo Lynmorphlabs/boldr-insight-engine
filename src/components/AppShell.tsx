@@ -41,7 +41,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex w-[260px] flex-col border-r border-border bg-surface/70 backdrop-blur">
         <div className="px-5 pt-6 pb-5 border-b border-border">
           <Link to="/inbox" className="flex items-center gap-3 group">
-            <div className="h-9 w-9 rounded-xl gradient-brand text-primary-foreground flex items-center justify-center shadow-[0_8px_24px_-8px_oklch(0.78_0.13_295_/_0.6)]">
+            <div className="h-9 w-9 rounded-xl gradient-brand text-primary-foreground flex items-center justify-center shadow-[0_8px_24px_-8px_oklch(0.72_0.19_45_/_0.6)]">
               <Watch className="h-4 w-4" />
             </div>
             <div className="leading-tight">
