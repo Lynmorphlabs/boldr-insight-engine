@@ -21,11 +21,21 @@ import {
   MessageSquare,
   Send,
   X,
-  
+  ShoppingBag,
+  Package,
+  Truck,
+  PlugZap,
+  TrendingUp,
   Inbox as InboxIcon,
   BookPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getShopifyLookup,
+  isShopifyOpsTicket,
+  SHOPIFY_CONNECTION_MODE,
+  type ShopifyLookup,
+} from "@/lib/shopify-ops";
 
 // "Routed to" only makes sense when it points OUTSIDE the CS desk
 // (e.g. service centre, Shopify ops, B2B). The user of this app IS cs@boldr.co.
