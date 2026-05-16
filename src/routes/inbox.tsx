@@ -21,11 +21,21 @@ import {
   MessageSquare,
   Send,
   X,
-  
+  ShoppingBag,
+  Package,
+  Truck,
+  PlugZap,
+  TrendingUp,
   Inbox as InboxIcon,
   BookPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getShopifyLookup,
+  isShopifyOpsTicket,
+  SHOPIFY_CONNECTION_MODE,
+  type ShopifyLookup,
+} from "@/lib/shopify-ops";
 
 // "Routed to" only makes sense when it points OUTSIDE the CS desk
 // (e.g. service centre, Shopify ops, B2B). The user of this app IS cs@boldr.co.
@@ -257,7 +267,13 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
       </div>
 
       <div className="mt-4 flex items-center gap-2 flex-wrap">
-        <Chip>{laneLabel(ticket.lane)}</Chip>
+        {isShopifyOpsTicket(ticket) ? (
+          <span className="inline-flex items-center gap-1 rounded bg-primary/15 text-primary px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]">
+            <ShoppingBag className="h-2.5 w-2.5" /> Shopify Ops
+          </span>
+        ) : (
+          <Chip>{laneLabel(ticket.lane)}</Chip>
+        )}
         <PersonaChip persona={ticket.persona} />
         <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]", statusTone(ticket.status))}>
           {ticket.status.replace("_", " ")}
@@ -285,60 +301,80 @@ function AiPanel({ ticket }: { ticket: Ticket }) {
       {/* extracted */}
       <div className="rounded-md hairline bg-card p-3.5 space-y-2.5">
         <Row label="Intent" value={ticket.intent} />
-        <Row label="Lane" value={laneLabel(ticket.lane)} />
+        <Row
+          label="Lane"
+          valueNode={
+            isShopifyOpsTicket(ticket) ? (
+              <span className="inline-flex items-center gap-1 rounded bg-primary/15 text-primary px-1.5 py-0.5 text-[10.5px] uppercase tracking-[0.1em]">
+                <ShoppingBag className="h-2.5 w-2.5" /> Shopify Ops
+              </span>
+            ) : (
+              <span>{laneLabel(ticket.lane)}</span>
+            )
+          }
+        />
         <Row label="Persona" valueNode={<PersonaChip persona={ticket.persona} />} />
         <Row label="Knowledge gap" value={ticket.isKnowledgeGap ? "Yes" : "No"} />
         <Row label="Requires escalation" value={ticket.requiresEscalation ? "Yes" : "No"} />
-        {isExternalRoute(ticket.routedTo) && <Row label="Routed to" value={ticket.routedTo!} />}
+        {!isShopifyOpsTicket(ticket) && isExternalRoute(ticket.routedTo) && (
+          <Row label="Routed to" value={ticket.routedTo!} />
+        )}
       </div>
 
-      {/* KB match OR gap */}
-      {ticket.isKnowledgeGap ? (
-        <div className="rounded-md border border-destructive/40 bg-destructive-soft p-4">
-          <div className="flex items-center gap-2">
-            <FileWarning className="h-4 w-4 text-destructive" />
-            <div className="text-[13px] font-medium">Knowledge gap — needs your answer</div>
-          </div>
-          <p className="mt-2 text-[12.5px] text-foreground/80 leading-relaxed">
-            AI couldn't answer from the KB and <span className="font-medium">did not guess</span>. Write the
-            canonical answer once below — it becomes a KB entry and auto-resolves future tickets like this.
-          </p>
-        </div>
-      ) : ticket.answeredByKb ? (
-        <div className="rounded-md hairline bg-card p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" />
-            <div className="text-[12px] font-medium">KB Match</div>
-          </div>
-          <div className="space-y-1.5">
-            {(ticket.kbMatches ?? []).slice(0, 2).map((m) => {
-              const kb = kbEntries.find((k) => k.id === m.kbId);
-              return (
-                <div key={m.kbId} className="flex items-start justify-between gap-2 text-[12.5px]">
-                  <div>
-                    <div className="font-medium">{kb?.question ?? m.kbId}</div>
-                    <div className="text-[11px] text-muted-foreground">{m.kbId} · {kb?.category}</div>
-                  </div>
-                  <div className="text-[11px] tabular-nums text-ember font-medium">{(m.similarity * 100).toFixed(0)}%</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
+      {/* SHOPIFY OPS LANE — replaces KB match + draft entirely */}
+      {isShopifyOpsTicket(ticket) ? (
+        <ShopifyOpsCard key={ticket.id} ticket={ticket} />
+      ) : (
+        <>
+          {/* KB match OR gap */}
+          {ticket.isKnowledgeGap ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive-soft p-4">
+              <div className="flex items-center gap-2">
+                <FileWarning className="h-4 w-4 text-destructive" />
+                <div className="text-[13px] font-medium">Knowledge gap — needs your answer</div>
+              </div>
+              <p className="mt-2 text-[12.5px] text-foreground/80 leading-relaxed">
+                AI couldn't answer from the KB and <span className="font-medium">did not guess</span>. Write the
+                canonical answer once below — it becomes a KB entry and auto-resolves future tickets like this.
+              </p>
+            </div>
+          ) : ticket.answeredByKb ? (
+            <div className="rounded-md hairline bg-card p-3.5">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                <div className="text-[12px] font-medium">KB Match</div>
+              </div>
+              <div className="space-y-1.5">
+                {(ticket.kbMatches ?? []).slice(0, 2).map((m) => {
+                  const kb = kbEntries.find((k) => k.id === m.kbId);
+                  return (
+                    <div key={m.kbId} className="flex items-start justify-between gap-2 text-[12.5px]">
+                      <div>
+                        <div className="font-medium">{kb?.question ?? m.kbId}</div>
+                        <div className="text-[11px] text-muted-foreground">{m.kbId} · {kb?.category}</div>
+                      </div>
+                      <div className="text-[11px] tabular-nums text-ember font-medium">{(m.similarity * 100).toFixed(0)}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
-      {/* Answerable: draft reply (uses ticket.draftReply when present, else synthesised from top KB match) */}
-      {!ticket.isGap && ticket.answeredByKb && (
-        <DraftReplyCard key={ticket.id} ticket={ticket} />
+          {/* Answerable: draft reply */}
+          {!ticket.isGap && ticket.answeredByKb && (
+            <DraftReplyCard key={ticket.id} ticket={ticket} />
+          )}
+
+          {/* Honest empty state: no KB match AND not a gap */}
+          {!ticket.isGap && !ticket.answeredByKb && (
+            <ManualReplyCard key={ticket.id} ticket={ticket} />
+          )}
+
+          {/* CS-authored KB entry form — the hero moment */}
+          {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
+        </>
       )}
-
-      {/* Honest empty state: no KB match AND not a gap */}
-      {!ticket.isGap && !ticket.answeredByKb && (
-        <ManualReplyCard key={ticket.id} ticket={ticket} />
-      )}
-
-      {/* CS-authored KB entry form — the hero moment */}
-      {ticket.isGap && <KbGapForm key={ticket.id} ticket={ticket} />}
     </div>
   );
 }
@@ -652,6 +688,262 @@ function ManualReplyCard({ ticket }: { ticket: Ticket }) {
           <Send className="h-3 w-3" /> Send reply
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * SHOPIFY OPS CARD — the connector lane.
+ * Demo mode renders mock Admin API results; swap getShopifyLookup for live.
+ * ------------------------------------------------------------------------- */
+
+function ShopifyOpsCard({ ticket }: { ticket: Ticket }) {
+  const lookup = useMemo<ShopifyLookup>(() => getShopifyLookup(ticket), [ticket]);
+  const [ran, setRan] = useState(false);
+  const [body, setBody] = useState(lookup.draft);
+  const [editing, setEditing] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [signalQueued, setSignalQueued] = useState(false);
+
+  const KindIcon =
+    lookup.kind === "stock_availability"
+      ? Package
+      : lookup.kind === "shipping_options"
+      ? Truck
+      : ShoppingBag;
+
+  return (
+    <div className="space-y-3">
+      {/* Connector status banner */}
+      <div className="rounded-md border border-primary/30 bg-primary/5 p-3 flex items-start gap-2.5">
+        <div className="h-7 w-7 rounded bg-primary/15 text-primary flex items-center justify-center shrink-0">
+          <ShoppingBag className="h-3.5 w-3.5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-medium">
+            Shopify Ops · {SHOPIFY_CONNECTION_MODE === "demo" ? "Demo mode" : "Live"}
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+            {SHOPIFY_CONNECTION_MODE === "demo"
+              ? "Architected as a connector. Mock Admin API data layer for demo safety — swap for live Shopify on connect."
+              : "Connected to Shopify Admin API."}
+          </p>
+        </div>
+        {SHOPIFY_CONNECTION_MODE === "demo" && (
+          <button
+            disabled
+            title="Production-only — placeholder for v1"
+            className="inline-flex items-center gap-1 rounded hairline bg-card px-2 py-1 text-[11px] text-muted-foreground"
+          >
+            <PlugZap className="h-3 w-3" /> Connect Shopify
+          </button>
+        )}
+      </div>
+
+      {/* Lookup card */}
+      <div className="rounded-md hairline bg-card p-3.5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <KindIcon className="h-3.5 w-3.5 text-primary" />
+            <div className="text-[12px] font-medium">{lookup.label}</div>
+          </div>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em]",
+              ran || lookup.pending
+                ? lookup.pending
+                  ? "bg-warning-soft text-foreground"
+                  : "bg-success-soft text-foreground"
+                : "bg-ember-soft text-foreground",
+            )}
+          >
+            {lookup.pending && !ran
+              ? "Pending Shopify lookup"
+              : ran
+              ? lookup.pending
+                ? "Pending live data"
+                : "Lookup complete"
+              : "Lookup required"}
+          </span>
+        </div>
+
+        {!ran ? (
+          <button
+            onClick={() => setRan(true)}
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] text-primary-foreground hover:opacity-90"
+          >
+            <Sparkles className="h-3 w-3" /> Run Shopify lookup
+          </button>
+        ) : (
+          <ShopifyLookupResult lookup={lookup} />
+        )}
+      </div>
+
+      {/* Signal */}
+      {ran && lookup.signal && (
+        <div className="rounded-md border border-ember/40 bg-ember/5 p-3 flex items-start gap-2.5">
+          <TrendingUp className="h-3.5 w-3.5 text-ember mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-medium">
+              Marketing / product signal · <span className="text-ember">{lookup.signal.tag}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+              {lookup.signal.reason}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setSignalQueued(true);
+              toast.success(`Signal "${lookup.signal!.tag}" queued for benchmark engine`);
+            }}
+            disabled={signalQueued}
+            className="inline-flex items-center gap-1 rounded hairline bg-card px-2 py-1 text-[11px] text-foreground hover:bg-surface disabled:opacity-50"
+          >
+            {signalQueued ? <><Check className="h-3 w-3 text-success" /> Queued</> : "Flag signal"}
+          </button>
+        </div>
+      )}
+
+      {/* Draft reply with human approval (always required) */}
+      {ran &&
+        (sent ? (
+          <div className="rounded-md border border-success/40 bg-success-soft/40 p-3.5">
+            <div className="flex items-center gap-2 text-[12.5px]">
+              <Check className="h-3.5 w-3.5 text-success" />
+              <span className="font-medium">Reply sent to {ticket.customer}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-md hairline bg-card p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[12px] font-medium">Drafted reply</div>
+              <div className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+                Human approval required
+              </div>
+            </div>
+            {editing ? (
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={8}
+                autoFocus
+                className="w-full rounded bg-surface p-3 text-[12.5px] leading-relaxed text-foreground/90 hairline outline-none focus:ring-2 focus:ring-ember/30 resize-y"
+              />
+            ) : (
+              <div className="rounded bg-surface p-3 text-[12.5px] whitespace-pre-wrap leading-relaxed text-foreground/85">
+                {body}
+              </div>
+            )}
+            <div className="mt-3 flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  if (lookup.pending) {
+                    toast.error("Cannot mark resolved — Shopify lookup is pending. Confirm with live data first.");
+                    return;
+                  }
+                  setSent(true);
+                  toast.success(`Reply sent to ${ticket.customer}`);
+                }}
+                disabled={!body.trim()}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[12px] text-primary-foreground hover:opacity-90 disabled:opacity-40"
+              >
+                <Send className="h-3 w-3" /> Approve & send
+              </button>
+              <button
+                onClick={() => setEditing((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] hover:bg-surface"
+              >
+                <Edit3 className="h-3 w-3" /> {editing ? "Done editing" : "Edit"}
+              </button>
+              <button
+                onClick={() => {
+                  setBody(lookup.draft);
+                  setEditing(false);
+                  toast("Draft rejected — reverted to lookup result");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md hairline bg-card px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-destructive"
+              >
+                <X className="h-3 w-3" /> Reject
+              </button>
+              {lookup.pending && (
+                <span className="ml-auto text-[10.5px] text-warning">Cannot resolve until live data confirms.</span>
+              )}
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+function ShopifyLookupResult({ lookup }: { lookup: ShopifyLookup }) {
+  if (lookup.kind === "stock_availability" && lookup.inventory) {
+    return (
+      <div className="space-y-1.5">
+        {lookup.inventory.map((i) => {
+          const low = i.available_quantity <= i.low_stock_threshold;
+          const out = i.available_quantity === 0;
+          return (
+            <div key={`${i.sku}-${i.location}`} className="flex items-center justify-between text-[12px] py-1 border-b border-border/60 last:border-0">
+              <div className="min-w-0">
+                <div className="font-medium truncate">{i.product_name}</div>
+                <div className="text-[10.5px] text-muted-foreground">{i.variant_name} · {i.location} · {i.sku}</div>
+              </div>
+              <span className={cn(
+                "tabular-nums text-[11px] rounded px-1.5 py-0.5 uppercase tracking-[0.1em]",
+                out ? "bg-destructive-soft text-destructive" : low ? "bg-ember-soft text-ember" : "bg-success-soft text-success",
+              )}>
+                {out ? "Sold out" : `${i.available_quantity} in stock${low ? " · low" : ""}`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (lookup.kind === "shipping_options" && lookup.shipping) {
+    return (
+      <div className="space-y-1.5">
+        {lookup.shipping.map((s) => (
+          <div key={`${s.method}-${s.destination}`} className="flex items-center justify-between text-[12px] py-1 border-b border-border/60 last:border-0">
+            <div>
+              <div className="font-medium">{s.method} <span className="text-muted-foreground font-normal">· {s.destination}</span></div>
+              <div className="text-[10.5px] text-muted-foreground">{s.eta_days} · {s.cutoff}</div>
+            </div>
+            <span className="tabular-nums text-[11.5px]">{s.price_sgd === 0 ? "Free" : `SGD ${s.price_sgd}`}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (lookup.order) {
+    const o = lookup.order;
+    return (
+      <div className="rounded bg-surface/70 p-2.5 text-[12px] space-y-1">
+        <div className="flex justify-between"><span className="text-muted-foreground">Order</span><span className="tabular-nums">{o.order_id}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Order status</span><span>{o.order_status}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Fulfilment</span><span>{o.fulfillment_status.replace(/_/g, " ")}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{o.shipping_method}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">ETA</span><span>{new Date(o.estimated_delivery).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></div>
+        {o.tracking_url && (
+          <div className="flex justify-between gap-2 min-w-0">
+            <span className="text-muted-foreground shrink-0">Tracking</span>
+            <a href={o.tracking_url} target="_blank" rel="noreferrer" className="truncate text-primary hover:underline">{o.tracking_url}</a>
+          </div>
+        )}
+        {o.notes && (
+          <div className="pt-1 mt-1 border-t border-border/60 text-[11.5px] text-muted-foreground leading-relaxed">
+            {o.notes}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded bg-warning-soft/40 p-2.5 text-[12px] text-foreground/80">
+      No matching record in mock Shopify data. {lookup.pending ?? "Awaiting customer detail."}
     </div>
   );
 }
