@@ -71,7 +71,7 @@ export function CopilotPanel() {
           turns.map((turn) =>
             turn.role === "user" ? (
               <div key={turn.id} className="flex items-start gap-3 justify-end">
-                <div className="rounded-2xl rounded-tr-md gradient-brand text-primary-foreground px-4 py-2.5 text-[13.5px] max-w-[80%] shadow-[0_6px_20px_-10px_oklch(0.78_0.13_295_/_0.6)]">
+                <div className="rounded-2xl rounded-tr-md gradient-brand text-primary-foreground px-4 py-2.5 text-[13.5px] max-w-[80%] shadow-[0_6px_20px_-10px_oklch(0.72_0.19_45_/_0.6)]">
                   {turn.text}
                 </div>
                 <div className="h-7 w-7 rounded-full bg-surface-2 hairline flex items-center justify-center shrink-0">

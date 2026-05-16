@@ -160,7 +160,7 @@ function CopilotCta() {
       >
         <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full gradient-brand opacity-[0.18] blur-3xl pointer-events-none" />
         <div className="relative flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl gradient-brand flex items-center justify-center text-primary-foreground shadow-[0_10px_30px_-10px_oklch(0.78_0.13_295_/_0.6)] shrink-0">
+          <div className="h-12 w-12 rounded-2xl gradient-brand flex items-center justify-center text-primary-foreground shadow-[0_10px_30px_-10px_oklch(0.72_0.19_45_/_0.6)] shrink-0">
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
