@@ -13,6 +13,12 @@ This is not a customer-facing chatbot. It is a self-improving intelligence workf
 
 ---
 
+## Links
+
+- **Demo video and workflow screenshots:** [Google Drive folder](https://drive.google.com/drive/folders/1qovwL5REbJoZllngAQ8HvXUHw_ShoLSY?usp=share_link)
+- **Workflow platform:** Morpheus Labs Fuseful Workflow Studio
+
+---
 ## Problem
 
 Boldr receives customer enquiries about detailed product, material, customisation, and servicing questions, such as:
@@ -853,7 +859,3 @@ Some connectors and backend sync routes are implemented in prototype/demo mode t
 
 ---
 
-## Links
-
-- **Demo video and workflow screenshots:** [Google Drive folder](https://drive.google.com/drive/folders/1qovwL5REbJoZllngAQ8HvXUHw_ShoLSY?usp=share_link)
-- **Workflow platform:** Morpheus Labs Fuseful Workflow Studio
