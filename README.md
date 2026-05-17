@@ -9,8 +9,7 @@ Built for the **Echelon 2026 AI Workflow Competition**, this platform transforms
 3. Product and marketing intelligence
 4. External market sentiment benchmarking
 
-The goal is not to build a chatbot.  
-The goal is to turn every customer question into reusable operational knowledge and marketing signal.
+This is not a customer-facing chatbot. It is a self-improving intelligence workflow that turns customer questions into approved replies, reusable KB entries, and product/marketing signals.
 
 ---
 
@@ -68,6 +67,36 @@ Every ticket does one of three things:
 
 ---
 
+## Platform Overview
+
+The platform has three main layers:
+
+```text
+Frontend Workspace
+    ↓
+AI Workflow Layer
+    ↓
+Knowledge + Ticket + Sentiment Data Layer
+```
+
+### Frontend Workspace
+
+The frontend provides four main user-facing modules:
+
+1. **Email Ops**
+   CS triage, ticket handling, draft replies, knowledge gap resolution
+
+2. **Knowledge Base**
+   Live KB entries, source documents, pending approvals, and auto-drafted entries
+
+3. **Marketing Intelligence**
+   Theme clustering, persona analysis, trend detection, and monthly brief generation
+
+4. **External Sentiment**
+   Internal vs external signal comparison, source quotes, and benchmark verdicts
+
+---
+
 ## Key Features
 
 ### 1. Email Ops Workspace
@@ -87,7 +116,7 @@ It shows:
 
 The AI triage layer classifies each ticket into the correct handling path.
 
-Example lanes:
+Example support lanes and categories include:
 
 * Knowledge Base
 * Shopify Ops
@@ -145,7 +174,7 @@ It includes entries from:
 * Spreadsheets and structured source files
 * Auto-drafted entries from resolved customer gaps
 
-Source documents are synced from Google Drive every 5 minutes.
+Source documents are designed to sync from Google Drive every 5 minutes.
 
 The system:
 
@@ -308,39 +337,9 @@ This makes the insight layer explainable rather than a black-box AI summary.
 
 ---
 
-## Platform Architecture
-
-The platform has three main layers:
-
-```text
-Frontend Workspace
-    ↓
-AI Workflow Layer
-    ↓
-Knowledge + Ticket + Sentiment Data Layer
-```
-
-### Frontend Workspace
-
-The frontend provides four main user-facing modules:
-
-1. **Email Ops**
-   CS triage, ticket handling, draft replies, gap resolution
-
-2. **Knowledge Base**
-   Live KB entries, source documents, pending approvals, auto-drafted entries
-
-3. **Marketing Intelligence**
-   Theme clustering, persona analysis, trend detection, monthly brief generation
-
-4. **External Sentiment**
-   Internal vs external signal comparison, source quotes, benchmark verdicts
-
----
-
 ## Workflow Studio Architecture
 
-The backend intelligence layer is split into six workflows.
+The backend intelligence layer is split into selected core workflows powered by **Morpheus Labs Fuseful Workflow Studio**.
 
 ### 1. Boldr Main Workflow
 
@@ -487,42 +486,7 @@ Responsibilities:
 
 ---
 
-### 4. Insights AI Assistant with Dual Search
-
-Powers the Ask Your Data panel.
-
-Flow:
-
-```text
-Ask Insights AI
-    ↓
-Parse User Question
-    ↓
-Retrieve Internal Tickets
-    ↓
-Retrieve External Sources
-    ↓
-Retrieve Theme Benchmarks
-    ↓
-Rank Evidence
-    ↓
-AI Generate Cited Answer
-    ↓
-Return Answer + Citations
-```
-
-Responsibilities:
-
-* Understand user questions
-* Search internal tickets
-* Search external sentiment data
-* Rank evidence
-* Generate cited answers
-* Make insights explainable
-
----
-
-### 5. Marketing Intelligence Workflow
+### 4. Marketing Intelligence Workflow
 
 Generates the Marketing Intelligence dashboard and monthly brief.
 
@@ -565,7 +529,7 @@ Responsibilities:
 
 ---
 
-### 6. External Sentiment Analysis Workflow
+### 5. External Sentiment Analysis Workflow
 
 Fetches and classifies external market signals.
 
@@ -602,6 +566,41 @@ Responsibilities:
 
 ---
 
+### 6. Insights AI Assistant with Dual Search
+
+Powers the Ask Your Data panel.
+
+Flow:
+
+```text
+Ask Insights AI
+    ↓
+Parse User Question
+    ↓
+Retrieve Internal Tickets
+    ↓
+Retrieve External Sources
+    ↓
+Retrieve Theme Benchmarks
+    ↓
+Rank Evidence
+    ↓
+AI Generate Cited Answer
+    ↓
+Return Answer + Citations
+```
+
+Responsibilities:
+
+* Understand user questions
+* Search internal tickets
+* Search external sentiment data
+* Rank evidence
+* Generate cited answers
+* Make insights explainable
+
+---
+
 ## Data Sources
 
 ### Internal Sources
@@ -617,7 +616,7 @@ The system uses the six provided Boldr source files:
 | FAQ document               | Existing customer-facing answers                        |
 | CS SOP                     | Escalation rules, tone guidelines, handling process     |
 
-These source documents are maintained in Google Drive and synced every 5 minutes.
+These source documents are maintained in Google Drive and used as the knowledge layer for customer support, KB search, and gap resolution.
 
 ### External Sources
 
@@ -711,27 +710,106 @@ This turns customer support into product marketing intelligence.
 
 ---
 
+## Safeguards
+
+### Human Checkpoints
+
+All customer-facing replies require human approval before sending.
+
+When the AI cannot find confirmed knowledge, it flags a knowledge gap and routes it to CS instead of guessing.
+
+Auto-drafted KB entries require CS approval or editing before becoming live.
+
+### Reliability Safeguards
+
+The workflow uses:
+
+* Source-grounded retrieval
+* Human approval checkpoints
+* Provenance on KB entries
+* Pending-approval states
+* Sync logs
+* Knowledge gap routing when no confirmed answer exists
+
+If no confirmed KB match is found, the system flags a gap instead of generating an unsupported answer.
+
+### Privacy Safeguards
+
+The prototype uses demo/anonymised customer ticket data where possible.
+
+Customer-facing replies stay human-approved.
+
+Sensitive data is not used directly for marketing output.
+
+External sentiment uses public sources, and internal insights are intended for staff use only.
+
+### Failure Modes and Fallbacks
+
+Possible failures include:
+
+* Missing or stale source documents
+* Incorrect ticket classification
+* Weak external sentiment matches
+* Connector or API failures
+* Incomplete KB coverage
+
+Fallback behaviour:
+
+* Route ticket to human review
+* Mark the answer as pending confirmation
+* Keep draft replies unsent until approved
+* Log the issue for KB or workflow update
+
+---
+
+## Business Impact
+
+The platform is designed to reduce repeated support work and unlock support-driven product and marketing intelligence.
+
+Expected impact for a lean 3-person CS team:
+
+* Faster reply drafting
+* Less repeated document searching
+* More consistent KB updates
+* Better visibility into product-page gaps
+* Monthly marketing insights from real customer questions
+* External validation of whether a theme is brand-specific or market-wide
+
+Estimated time saved:
+
+```text
+6–10 hours per week for a 3-person CS team
+```
+
+Estimated monthly value:
+
+```text
+SGD 600–1,500 in saved support/admin time, plus potential revenue upside from clearer product pages and campaign angles.
+```
+
+---
+
 ## Requirement Coverage
 
-| Requirement                                | Status    |
-| ------------------------------------------ | --------- |
-| Ingest customer enquiry                    | Completed |
-| Extract intent and context                 | Completed |
-| Search KB documents                        | Completed |
-| Draft reply if answerable                  | Completed |
-| Human approval before sending              | Completed |
-| Flag knowledge gaps                        | Completed |
-| Avoid hallucinated answers                 | Completed |
-| Auto-draft KB entry after human resolution | Completed |
-| Sync KB from source documents              | Completed |
-| Theme clustering                           | Completed |
-| Monthly marketing brief                    | Completed |
-| Buyer persona tagging                      | Completed |
-| External sentiment benchmarking            | Completed |
-| 2+ external sources                        | Completed |
-| 3+ theme comparison                        | Completed |
-| Actionable insight per theme               | Completed |
-| Ask-your-data assistant with citations     | Completed |
+| Requirement                                | Status                  |
+| ------------------------------------------ | ----------------------- |
+| Ingest customer enquiry                    | Demonstrated            |
+| Extract intent and context                 | Demonstrated            |
+| Search KB documents                        | Demonstrated            |
+| Draft reply if answerable                  | Demonstrated            |
+| Human approval before sending              | Demonstrated            |
+| Flag knowledge gaps                        | Demonstrated            |
+| Avoid hallucinated answers                 | Demonstrated            |
+| Auto-draft KB entry after human resolution | Demonstrated            |
+| Sync KB from source documents              | Prototype/demo workflow |
+| Theme clustering                           | Demonstrated            |
+| Monthly marketing brief                    | Demonstrated            |
+| Buyer persona tagging                      | Demonstrated            |
+| External sentiment benchmarking            | Demonstrated            |
+| 2+ external sources                        | Demonstrated            |
+| 3+ theme comparison                        | Demonstrated            |
+| Actionable insight per theme               | Demonstrated            |
+| Ask-your-data assistant with citations     | Demonstrated            |
 
 ---
 
@@ -767,40 +845,15 @@ Classify → Retrieve → Draft → Escalate → Learn → Cluster → Recommend
 
 ---
 
-## Demo Notes
+## Status
 
-Recommended demo order:
+Built as a demo-ready prototype for the Echelon 2026 AI Workflow Competition.
 
-1. Workflow Studio overview
-2. Email Ops inbox
-3. AI triage panel
-4. Knowledge gap example
-5. Human answer + Save KB & Reply
-6. Knowledge Base auto-drafted entry
-7. KB auto-sync workflow
-8. Marketing Intelligence dashboard
-9. External Sentiment benchmarking
-10. Ask Your Data assistant
-
-Closing line:
-
-```text
-Every support ticket now either gets answered, improves the knowledge base, or becomes a marketing signal.
-```
+Some connectors and backend sync routes are implemented in prototype/demo mode to demonstrate the intended production architecture. The core workflow logic, frontend experience, knowledge gap loop, marketing intelligence layer, and external benchmarking flow are shown in the demo.
 
 ---
 
-## Status
+## Links
 
-Prototype built for the Echelon 2026 AI Workflow Competition.
-
-Current mode:
-
-```text
-Demo-ready prototype
-```
-
-Some operational connectors may use mock/demo data layers for safe demonstration, while the architecture is designed to support live integrations such as Gmail, Google Drive, Shopify, and external sentiment sources.
-
-```
-```
+- **Demo video and workflow screenshots:** [Google Drive folder](https://drive.google.com/drive/folders/1qovwL5REbJoZllngAQ8HvXUHw_ShoLSY?usp=share_link)
+- **Workflow platform:** Morpheus Labs Fuseful Workflow Studio
